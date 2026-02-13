@@ -4,6 +4,7 @@ Manages discussion creation, turn-taking, transcript persistence, and agent part
 """
 
 import random
+import sys
 
 from agora.agent import Agent, load_agents
 from agora.config import DISCUSSIONS_DIR, DEFAULT_ROUNDS_PER_BATCH, MAX_CONSECUTIVE_SILENCE
@@ -372,6 +373,126 @@ class Discussion:
         print(speaker_line)
         print(content)
         print()  # Empty line after message
+
+    def add_user_message(self, content: str) -> None:
+        """Record user's message in transcript.
+
+        Args:
+            content: The user's message content
+        """
+        # Record in transcript via add_message
+        # add_message already handles agent observations with memory_type="user_interaction"
+        self.add_message("User", content)
+
+    def is_finished(self) -> bool:
+        """Check if the discussion should be considered finished.
+
+        Returns:
+            True if consecutive_silence >= MAX_CONSECUTIVE_SILENCE * 2
+            (all agents have declined twice in a row without even a nudge producing conversation)
+        """
+        return self.consecutive_silence >= MAX_CONSECUTIVE_SILENCE * 2
+
+    def update_status(self, status: str) -> None:
+        """Update the status field in meta.md.
+
+        Args:
+            status: New status value (e.g., "active", "completed", "paused")
+        """
+        meta_path = self.discussion_dir / "meta.md"
+
+        # Read current meta.md
+        meta_content = read_markdown_file(meta_path)
+
+        # Replace status line
+        lines = meta_content.split('\n')
+        new_lines = []
+        for line in lines:
+            if line.startswith('- **Status:**'):
+                new_lines.append(f'- **Status:** {status}')
+            else:
+                new_lines.append(line)
+
+        # Write back
+        new_meta_content = '\n'.join(new_lines)
+        write_markdown_file(meta_path, new_meta_content)
+
+    def get_summary(self) -> str:
+        """Return a formatted summary of the discussion for display.
+
+        Returns:
+            Formatted string with topic, participants, rounds, message count, status
+        """
+        # Count messages in transcript
+        message_count = len(self.transcript)
+
+        # Get participant names
+        participant_names = ", ".join(agent.name for agent in self.agents)
+
+        # Read status from meta.md
+        meta_path = self.discussion_dir / "meta.md"
+        meta_content = read_markdown_file(meta_path)
+        status = parse_markdown_field(meta_content, "Status")
+
+        # Format summary
+        summary = f"""Discussion: {self.topic}
+ID: {self.discussion_id}
+Participants: {participant_names}
+Rounds: {self.round_number}
+Messages: {message_count}
+Status: {status}"""
+
+        return summary
+
+    def print_header(self) -> None:
+        """Print the discussion header."""
+        participant_names = ", ".join(agent.name for agent in self.agents)
+        print(f"\n=== Agora: {self.topic} ===")
+        print(f"Participants: {participant_names}\n")
+        sys.stdout.flush()
+
+    def print_user_prompt(self) -> str:
+        """Print user prompt and read user input.
+
+        Returns:
+            The user's input string
+
+        Handles:
+            KeyboardInterrupt gracefully (treats as 'done')
+        """
+        try:
+            print()  # Blank line before prompt for visual separation
+            sys.stdout.flush()
+            user_input = input("> Your turn (message / 'continue' / 'done'): ")
+            return user_input
+        except KeyboardInterrupt:
+            print()  # Newline after Ctrl+C
+            return "done"
+
+    def handle_user_input(self, user_input: str) -> str:
+        """Parse user input and take appropriate action.
+
+        Args:
+            user_input: The user's input string
+
+        Returns:
+            Action type: "continue", "done", or "message"
+        """
+        # Normalize input
+        normalized = user_input.strip().lower()
+
+        # Check for continue
+        if normalized in ("continue", ""):
+            return "continue"
+
+        # Check for done
+        if normalized in ("done", "quit", "exit"):
+            self.update_status("completed")
+            return "done"
+
+        # Otherwise treat as a message
+        self.add_user_message(user_input.strip())
+        return "message"
 
 
 def list_discussions() -> list[dict]:
