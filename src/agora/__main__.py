@@ -1,4 +1,4 @@
-"""Entry point for running agora as a module: python -m agora"""
+"""Entry point for `python -m agora` and `uv run agora`."""
 
 from agora.cli import main
 

@@ -5,9 +5,16 @@ Provides argparse-based commands for managing discussions, agents, and memory.
 
 import argparse
 import sys
+import httpx
 
 from agora.agent import Agent, load_agents
-from agora.config import DEFAULT_ROUNDS_PER_BATCH
+from agora.config import (
+    DEFAULT_ROUNDS_PER_BATCH,
+    AGENTS_DIR,
+    DISCUSSIONS_DIR,
+    MEMORY_DIR,
+    OLLAMA_BASE_URL,
+)
 from agora.discussion import Discussion, list_discussions
 from agora.ollama_client import OllamaConnectionError
 from agora.persona import generate_persona, interactive_create_persona, list_personas
@@ -384,139 +391,209 @@ def _interactive_loop(discussion: Discussion) -> None:
         sys.exit(0)
 
 
+def _check_ollama_health() -> bool:
+    """Check if Ollama is running and accessible.
+
+    Returns:
+        True if Ollama is running, False otherwise.
+    """
+    try:
+        response = httpx.get(OLLAMA_BASE_URL, timeout=2.0)
+        return response.status_code == 200
+    except (httpx.ConnectError, httpx.TimeoutException):
+        return False
+
+
+def _ensure_data_directories() -> None:
+    """Ensure all required data directories exist."""
+    AGENTS_DIR.mkdir(parents=True, exist_ok=True)
+    DISCUSSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    MEMORY_DIR.mkdir(parents=True, exist_ok=True)
+
+
 def main() -> None:
-    """Main CLI entry point."""
-    parser = argparse.ArgumentParser(
-        prog="agora",
-        description="Local AI discussion forum powered by generative agents"
-    )
+    """Main CLI entry point with top-level error handling."""
+    try:
+        # Ensure data directories exist before running any commands
+        _ensure_data_directories()
 
-    # Create subparsers for top-level commands
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+        parser = argparse.ArgumentParser(
+            prog="agora",
+            description="Local AI discussion forum powered by generative agents"
+        )
 
-    # === Persona command (with sub-subcommands) ===
-    persona_parser = subparsers.add_parser(
-        "persona",
-        help="Manage agent personas"
-    )
-    persona_subparsers = persona_parser.add_subparsers(
-        dest="persona_command",
-        help="Persona operations"
-    )
+        # Create subparsers for top-level commands
+        subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # persona list
-    persona_list_parser = persona_subparsers.add_parser(
-        "list",
-        help="List all available personas"
-    )
-    persona_list_parser.set_defaults(func=cmd_persona_list)
+        # === Persona command (with sub-subcommands) ===
+        persona_parser = subparsers.add_parser(
+            "persona",
+            help="Manage agent personas"
+        )
+        persona_subparsers = persona_parser.add_subparsers(
+            dest="persona_command",
+            help="Persona operations"
+        )
 
-    # persona add
-    persona_add_parser = persona_subparsers.add_parser(
-        "add",
-        help="Interactively create a new persona"
-    )
-    persona_add_parser.set_defaults(func=cmd_persona_add)
+        # persona list
+        persona_list_parser = persona_subparsers.add_parser(
+            "list",
+            help="List all available personas"
+        )
+        persona_list_parser.set_defaults(func=cmd_persona_list)
 
-    # persona generate
-    persona_generate_parser = persona_subparsers.add_parser(
-        "generate",
-        help="Auto-generate diverse persona(s)"
-    )
-    persona_generate_parser.add_argument(
-        "--n",
-        type=int,
-        default=1,
-        help="Number of personas to generate (default: 1)"
-    )
-    persona_generate_parser.set_defaults(func=cmd_persona_generate)
+        # persona add
+        persona_add_parser = persona_subparsers.add_parser(
+            "add",
+            help="Interactively create a new persona"
+        )
+        persona_add_parser.set_defaults(func=cmd_persona_add)
 
-    # === Placeholder commands (task 20) ===
+        # persona generate
+        persona_generate_parser = persona_subparsers.add_parser(
+            "generate",
+            help="Auto-generate diverse persona(s)"
+        )
+        persona_generate_parser.add_argument(
+            "--n",
+            type=int,
+            default=1,
+            help="Number of personas to generate (default: 1)"
+        )
+        persona_generate_parser.set_defaults(func=cmd_persona_generate)
 
-    # discuss
-    discuss_parser = subparsers.add_parser(
-        "discuss",
-        help="Start a new discussion"
-    )
-    discuss_parser.add_argument("topic", help="Discussion topic")
-    discuss_parser.add_argument(
-        "--agents",
-        nargs="+",
-        help="Specific agent IDs to include (default: all)"
-    )
-    discuss_parser.add_argument(
-        "--rounds",
-        type=int,
-        default=5,
-        help="Number of auto-rounds before user prompt (default: 5)"
-    )
-    discuss_parser.set_defaults(func=cmd_discuss)
+        # === Placeholder commands (task 20) ===
 
-    # continue
-    continue_parser = subparsers.add_parser(
-        "continue",
-        help="Resume a paused discussion"
-    )
-    continue_parser.add_argument("discussion_id", help="Discussion ID to resume")
-    continue_parser.set_defaults(func=cmd_continue)
+        # discuss
+        discuss_parser = subparsers.add_parser(
+            "discuss",
+            help="Start a new discussion"
+        )
+        discuss_parser.add_argument("topic", help="Discussion topic")
+        discuss_parser.add_argument(
+            "--agents",
+            nargs="+",
+            help="Specific agent IDs to include (default: all)"
+        )
+        discuss_parser.add_argument(
+            "--rounds",
+            type=int,
+            default=5,
+            help="Number of auto-rounds before user prompt (default: 5)"
+        )
+        discuss_parser.set_defaults(func=cmd_discuss)
 
-    # list
-    list_parser = subparsers.add_parser(
-        "list",
-        help="List all discussions"
-    )
-    list_parser.set_defaults(func=cmd_list)
+        # continue
+        continue_parser = subparsers.add_parser(
+            "continue",
+            help="Resume a paused discussion"
+        )
+        continue_parser.add_argument("discussion_id", help="Discussion ID to resume")
+        continue_parser.set_defaults(func=cmd_continue)
 
-    # ask
-    ask_parser = subparsers.add_parser(
-        "ask",
-        help="Ask a direct question to an agent"
-    )
-    ask_parser.add_argument("agent_id", help="Agent ID to ask")
-    ask_parser.add_argument("question", help="Question to ask")
-    ask_parser.set_defaults(func=cmd_ask)
+        # list
+        list_parser = subparsers.add_parser(
+            "list",
+            help="List all discussions"
+        )
+        list_parser.set_defaults(func=cmd_list)
 
-    # reflect
-    reflect_parser = subparsers.add_parser(
-        "reflect",
-        help="Manually trigger reflection for an agent"
-    )
-    reflect_parser.add_argument("agent_id", help="Agent ID to reflect")
-    reflect_parser.set_defaults(func=cmd_reflect)
+        # ask
+        ask_parser = subparsers.add_parser(
+            "ask",
+            help="Ask a direct question to an agent"
+        )
+        ask_parser.add_argument("agent_id", help="Agent ID to ask")
+        ask_parser.add_argument("question", help="Question to ask")
+        ask_parser.set_defaults(func=cmd_ask)
 
-    # memory
-    memory_parser = subparsers.add_parser(
-        "memory",
-        help="View an agent's recent memories"
-    )
-    memory_parser.add_argument("agent_id", help="Agent ID")
-    memory_parser.add_argument(
-        "--last",
-        type=int,
-        default=20,
-        help="Number of recent memories to show (default: 20)"
-    )
-    memory_parser.set_defaults(func=cmd_memory)
+        # reflect
+        reflect_parser = subparsers.add_parser(
+            "reflect",
+            help="Manually trigger reflection for an agent"
+        )
+        reflect_parser.add_argument("agent_id", help="Agent ID to reflect")
+        reflect_parser.set_defaults(func=cmd_reflect)
 
-    # Parse arguments
-    args = parser.parse_args()
+        # memory
+        memory_parser = subparsers.add_parser(
+            "memory",
+            help="View an agent's recent memories"
+        )
+        memory_parser.add_argument("agent_id", help="Agent ID")
+        memory_parser.add_argument(
+            "--last",
+            type=int,
+            default=20,
+            help="Number of recent memories to show (default: 20)"
+        )
+        memory_parser.set_defaults(func=cmd_memory)
 
-    # If no command given, print help
-    if not args.command:
-        parser.print_help()
+        # Parse arguments
+        args = parser.parse_args()
+
+        # If no command given, print help
+        if not args.command:
+            parser.print_help()
+            sys.exit(0)
+
+        # Special handling for persona subcommand without sub-subcommand
+        if args.command == "persona" and not hasattr(args, 'func'):
+            persona_parser.print_help()
+            sys.exit(0)
+
+        # Validate Ollama connectivity for commands that need it
+        commands_needing_ollama = {"discuss", "continue", "ask", "reflect"}
+        persona_commands_needing_ollama = {"generate"}
+
+        needs_ollama = (
+            args.command in commands_needing_ollama
+            or (args.command == "persona" and hasattr(args, 'persona_command')
+                and args.persona_command in persona_commands_needing_ollama)
+        )
+
+        if needs_ollama and not _check_ollama_health():
+            print("Error: Cannot connect to Ollama.")
+            print()
+            print("Make sure Ollama is running:")
+            print("  ollama serve")
+            print()
+            print("And that required models are pulled:")
+            print("  ollama pull qwen2.5:32b-instruct")
+            print("  ollama pull nomic-embed-text")
+            sys.exit(1)
+
+        # Execute the appropriate handler function
+        if hasattr(args, 'func'):
+            args.func(args)
+        else:
+            parser.print_help()
+            sys.exit(0)
+
+    except KeyboardInterrupt:
+        # Clean exit on Ctrl+C (no traceback)
+        print()
         sys.exit(0)
-
-    # Special handling for persona subcommand without sub-subcommand
-    if args.command == "persona" and not hasattr(args, 'func'):
-        persona_parser.print_help()
-        sys.exit(0)
-
-    # Execute the appropriate handler function
-    if hasattr(args, 'func'):
-        args.func(args)
-    else:
-        parser.print_help()
-        sys.exit(0)
+    except OllamaConnectionError:
+        # This should be caught by pre-check, but handle it as fallback
+        print("Error: Cannot connect to Ollama.")
+        print()
+        print("Make sure Ollama is running:")
+        print("  ollama serve")
+        print()
+        print("And that required models are pulled:")
+        print("  ollama pull qwen2.5:32b-instruct")
+        print("  ollama pull nomic-embed-text")
+        sys.exit(1)
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print()
+        print("If this persists, please report the issue at:")
+        print("https://github.com/anthropics/claude-code/issues")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
