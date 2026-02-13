@@ -73,8 +73,12 @@ def heuristic_importance(content: str, context: str = "") -> int:
         score += 1
 
     # Agreement signals: less memorable but still notable
+    # Use word boundaries to avoid matching "agree" in "disagree"
     agreement_words = ['agree', 'exactly', 'right', 'yes']
-    if any(word in content_lower for word in agreement_words):
+    # Check for whole word matches to avoid substring false positives
+    # (e.g., "disagree" should not trigger "agree" bonus)
+    content_words = re.findall(r'\b\w+\b', content_lower)
+    if any(word in content_words for word in agreement_words):
         score += 0.5
 
     # Self-reference: personal stakes
@@ -91,7 +95,7 @@ def heuristic_importance(content: str, context: str = "") -> int:
         'changed my mind', 'reconsidered', 'rethinking', 'reconsider'
     ]
     if any(phrase in content_lower for phrase in reflection_phrases):
-        score += 4
+        score += 2
 
     # Clamp to [1, 10] and round to nearest integer
     final_score = min(10, max(1, round(score)))
