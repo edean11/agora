@@ -8,9 +8,95 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import re
+
 from agora.config import MEMORY_DIR, DECAY_FACTOR, DEFAULT_TOP_K
 from agora.ollama_client import embed
 from agora.utils import append_to_file, cosine_similarity, generate_id, now_iso, read_markdown_file, write_markdown_file
+
+
+def heuristic_importance(content: str, context: str = "") -> int:
+    """Calculate importance score (1-10) based on text heuristics.
+
+    This is a fast alternative to LLM-based importance scoring. It evaluates
+    content based on linguistic markers that correlate with memorable/important
+    statements in discussion contexts.
+
+    Args:
+        content: The text content to score
+        context: Optional context (currently unused, reserved for future use)
+
+    Returns:
+        Integer importance score in range [1, 10]
+    """
+    score = 4.0  # Base score (neutral)
+
+    content_lower = content.lower()
+    content_len = len(content)
+
+    # Length bonus: longer content tends to be more substantive
+    if content_len > 300:
+        score += 2
+    elif content_len > 100:
+        score += 1
+
+    # Question marks: questions drive discussion
+    question_count = content.count('?')
+    if question_count > 0:
+        score += 1
+        if question_count > 2:
+            score += 1
+
+    # Exclamation marks: emotional intensity
+    if '!' in content:
+        score += 1
+
+    # Named entities / proper nouns: capitalized words mid-sentence
+    # Look for capitalized words that aren't at the start of sentences
+    sentences = re.split(r'[.!?]+', content)
+    for sentence in sentences:
+        words = sentence.strip().split()
+        # Check for capitalized words beyond the first word
+        if len(words) > 1:
+            for word in words[1:]:
+                # Check if word starts with capital and isn't all caps (acronym)
+                if word and word[0].isupper() and not word.isupper():
+                    score += 1
+                    break  # Only add bonus once per sentence
+
+    # Disagreement signals: conflict is memorable
+    disagreement_words = [
+        'disagree', 'but', 'however', 'wrong', 'contrary',
+        'push back', 'challenge', 'oppose', 'refute'
+    ]
+    if any(word in content_lower for word in disagreement_words):
+        score += 1
+
+    # Agreement signals: less memorable but still notable
+    agreement_words = ['agree', 'exactly', 'right', 'yes']
+    if any(word in content_lower for word in agreement_words):
+        score += 0.5
+
+    # Self-reference: personal stakes
+    self_reference_phrases = [
+        'i think', 'i believe', 'in my experience',
+        'i feel', 'my view', 'personally'
+    ]
+    if any(phrase in content_lower for phrase in self_reference_phrases):
+        score += 1
+
+    # Reflection-type content: high value
+    reflection_phrases = [
+        'realize', 'upon reflection', "i've come to", 'i have come to',
+        'changed my mind', 'reconsidered', 'rethinking', 'reconsider'
+    ]
+    if any(phrase in content_lower for phrase in reflection_phrases):
+        score += 4
+
+    # Clamp to [1, 10] and round to nearest integer
+    final_score = min(10, max(1, round(score)))
+
+    return final_score
 
 
 @dataclass
