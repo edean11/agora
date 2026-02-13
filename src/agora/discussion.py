@@ -3,8 +3,10 @@
 Manages discussion creation, turn-taking, transcript persistence, and agent participation.
 """
 
+import random
+
 from agora.agent import Agent, load_agents
-from agora.config import DISCUSSIONS_DIR
+from agora.config import DISCUSSIONS_DIR, DEFAULT_ROUNDS_PER_BATCH, MAX_CONSECUTIVE_SILENCE
 from agora.utils import (
     append_to_file,
     format_timestamp,
@@ -248,6 +250,128 @@ class Discussion:
             lines.append("")  # Empty line between entries
 
         return '\n'.join(lines).strip()
+
+    def run_round(self) -> list[dict]:
+        """Execute one complete round of discussion.
+
+        Returns:
+            List of messages generated in this round (can be empty if all agents decline)
+        """
+        messages = []
+        recent_transcript = self.get_recent_transcript()
+
+        # Phase 1: Willingness - collect (agent, willing, engagement_score) tuples
+        willingness_results = []
+        for agent in self.agents:
+            willing, engagement_score = agent.decide_to_respond(self.topic, recent_transcript)
+            willingness_results.append((agent, willing, engagement_score))
+
+        # Filter to only willing agents
+        willing_agents = [(agent, score) for agent, willing, score in willingness_results if willing]
+
+        # Phase 2: Ordering - sort by engagement score descending
+        willing_agents.sort(key=lambda x: x[1], reverse=True)
+
+        # Phase 3: Generation - each willing agent generates response in order
+        if willing_agents:
+            for agent, engagement_score in willing_agents:
+                # Generate response
+                response = agent.generate_response(self.topic, recent_transcript, self.discussion_id)
+
+                # Add to transcript and trigger observations
+                self.add_message(agent.name, response)
+
+                # Print in real-time
+                timestamp = self.transcript[-1]['timestamp']
+                self._print_message(agent.name, response, timestamp)
+
+                # Track message for return
+                messages.append({"speaker": agent.name, "content": response})
+
+                # Update recent_transcript for next agent in this round
+                recent_transcript = self.get_recent_transcript()
+
+        # Phase 4: Silence tracking
+        if not willing_agents:
+            self.consecutive_silence += 1
+        else:
+            self.consecutive_silence = 0
+
+        # Phase 5: Fallback nudge
+        if self.consecutive_silence >= MAX_CONSECUTIVE_SILENCE:
+            # Pick a random agent
+            nudged_agent = random.choice(self.agents)
+
+            # Force generate_response (skip willingness check)
+            response = nudged_agent.generate_response(self.topic, recent_transcript, self.discussion_id)
+
+            # Add to transcript and trigger observations
+            self.add_message(nudged_agent.name, response)
+
+            # Print in real-time
+            timestamp = self.transcript[-1]['timestamp']
+            self._print_message(nudged_agent.name, response, timestamp)
+
+            # Track message for return
+            messages.append({"speaker": nudged_agent.name, "content": response})
+
+            # Reset consecutive silence
+            self.consecutive_silence = 0
+
+        # Increment round number
+        self.round_number += 1
+
+        return messages
+
+    def run_rounds(self, n: int = DEFAULT_ROUNDS_PER_BATCH) -> list[dict]:
+        """Run n rounds sequentially.
+
+        Args:
+            n: Number of rounds to run (default: DEFAULT_ROUNDS_PER_BATCH)
+
+        Returns:
+            Combined list of all messages from all rounds
+        """
+        all_messages = []
+
+        for i in range(n):
+            # Print round separator
+            print(f"\n{'='*60}")
+            print(f"ROUND {self.round_number + 1}")
+            print(f"{'='*60}\n")
+
+            # Run the round
+            round_messages = self.run_round()
+            all_messages.extend(round_messages)
+
+        return all_messages
+
+    def _print_message(self, speaker: str, content: str, timestamp: str) -> None:
+        """Format and print a single message to stdout.
+
+        Args:
+            speaker: Name of the speaker
+            content: The message content
+            timestamp: Timestamp of the message
+        """
+        # Find the agent to get persona info
+        agent = None
+        for a in self.agents:
+            if a.name == speaker:
+                agent = a
+                break
+
+        # Format speaker line with role/background
+        if agent:
+            role_info = agent.persona.background[:80]  # Truncate if too long
+            speaker_line = f"[{timestamp}] {speaker} ({role_info}):"
+        else:
+            speaker_line = f"[{timestamp}] {speaker}:"
+
+        # Print formatted message
+        print(speaker_line)
+        print(content)
+        print()  # Empty line after message
 
 
 def list_discussions() -> list[dict]:
