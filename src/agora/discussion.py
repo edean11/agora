@@ -3,8 +3,6 @@
 Manages discussion creation, turn-taking, transcript persistence, and agent participation.
 """
 
-from pathlib import Path
-
 from agora.agent import Agent, load_agents
 from agora.config import DISCUSSIONS_DIR
 from agora.utils import (
@@ -143,7 +141,7 @@ class Discussion:
         while i < len(lines):
             line = lines[i].strip()
             # Look for entry header: **[HH:MM] Speaker:**
-            if line.startswith('**[') and ']:' in line and line.endswith(':**'):
+            if line.startswith('**[') and '] ' in line and line.endswith(':**'):
                 # Extract timestamp and speaker
                 # Format: **[14:30] Speaker:**
                 timestamp_end = line.index(']')
