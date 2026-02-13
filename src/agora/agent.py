@@ -98,6 +98,13 @@ class Agent:
         if cumulative_importance >= REFLECTION_THRESHOLD:
             self._reflection_needed = True
 
+        # Trigger reflection if needed
+        if self._reflection_needed:
+            from agora import reflection
+            print(f"  [{self.name} is reflecting...]")
+            reflection.reflect(self)
+            self._reflection_needed = False
+
         return record
 
     def observe_own_statement(self, content: str, discussion_id: str) -> MemoryRecord:
@@ -127,6 +134,13 @@ class Agent:
         cumulative_importance = self.memory_stream.get_cumulative_importance_since_last_reflection()
         if cumulative_importance >= REFLECTION_THRESHOLD:
             self._reflection_needed = True
+
+        # Trigger reflection if needed
+        if self._reflection_needed:
+            from agora import reflection
+            print(f"  [{self.name} is reflecting...]")
+            reflection.reflect(self)
+            self._reflection_needed = False
 
         return record
 
@@ -301,6 +315,27 @@ class Agent:
         )
 
         return response
+
+    def trigger_reflection(self) -> list[MemoryRecord]:
+        """Manually trigger reflection regardless of threshold.
+
+        For `agora reflect` CLI command. Bypasses the importance threshold
+        and forces immediate reflection.
+
+        Returns:
+            List of newly created reflection MemoryRecords
+        """
+        from agora import reflection
+        return reflection.reflect(self)
+
+    def get_reflections(self) -> str:
+        """Get formatted reflection history for display.
+
+        Returns:
+            Formatted reflections string
+        """
+        from agora import reflection
+        return reflection.format_reflections(self.id)
 
     @property
     def name(self) -> str:

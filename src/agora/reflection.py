@@ -51,6 +51,10 @@ def reflect(agent: "Agent") -> list[MemoryRecord]:
     # Step 1: Get recent memories
     recent_memories = agent.memory_stream.get_recent(REFLECTION_RECENT_COUNT)
 
+    # Edge case: No memories to reflect on
+    if not recent_memories:
+        return []
+
     # Step 2: Generate reflection questions
     # Format memories for LLM
     formatted_memories = _format_memories_for_questions(recent_memories)
@@ -71,6 +75,11 @@ def reflect(agent: "Agent") -> list[MemoryRecord]:
             question,
             k=REFLECTION_EVIDENCE_PER_QUESTION
         )
+
+        # Edge case: If no evidence found, skip this question
+        if not evidence_memories:
+            continue
+
         evidence_ids = [mem.id for mem in evidence_memories]
 
         # Step 4: Synthesize insight
