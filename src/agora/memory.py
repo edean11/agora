@@ -1,0 +1,241 @@
+"""Memory stream system for Agora agents.
+
+Implements MemoryRecord dataclass and MemoryStream class for storing and retrieving
+agent memories. All memories are persisted to markdown files in chronological order.
+"""
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+from agora.config import MEMORY_DIR
+from agora.utils import append_to_file, generate_id, now_iso, read_markdown_file
+
+
+@dataclass
+class MemoryRecord:
+    """A single memory record in an agent's memory stream.
+
+    Attributes:
+        id: Unique identifier for this memory
+        timestamp: ISO 8601 timestamp when memory was created
+        type: Type of memory (observation/own_statement/reflection/user_interaction)
+        discussion_id: ID of the discussion this memory is from
+        importance: Importance score (1-10)
+        content: The actual memory text
+        last_accessed: ISO 8601 timestamp when memory was last retrieved
+        evidence: List of memory IDs that support this memory (for reflections)
+    """
+    id: str
+    timestamp: str
+    type: str
+    discussion_id: str
+    importance: int
+    content: str
+    last_accessed: str
+    evidence: list[str]
+
+
+class MemoryStream:
+    """Manages an agent's chronological memory stream.
+
+    Stores memories as MemoryRecord objects and persists them to markdown files.
+    Supports adding records, retrieving recent memories, and calculating cumulative
+    importance for reflection triggering.
+    """
+
+    def __init__(self, agent_id: str):
+        """Initialize memory stream for an agent.
+
+        Args:
+            agent_id: ID of the agent this memory stream belongs to
+        """
+        self.agent_id = agent_id
+        self.records: list[MemoryRecord] = self._load_from_file()
+
+    def add_record(
+        self,
+        type: str,
+        discussion_id: str,
+        importance: int,
+        content: str,
+        evidence: list[str] | None = None
+    ) -> MemoryRecord:
+        """Add a new memory record to the stream.
+
+        Args:
+            type: Type of memory (observation/own_statement/reflection/user_interaction)
+            discussion_id: ID of the discussion this memory is from
+            importance: Importance score (1-10)
+            content: The actual memory text
+            evidence: List of memory IDs supporting this memory (for reflections)
+
+        Returns:
+            The newly created MemoryRecord
+        """
+        timestamp = now_iso()
+        record = MemoryRecord(
+            id=generate_id(),
+            timestamp=timestamp,
+            type=type,
+            discussion_id=discussion_id,
+            importance=importance,
+            content=content,
+            last_accessed=timestamp,
+            evidence=evidence or []
+        )
+        self.records.append(record)
+        self._append_to_file(record)
+        return record
+
+    def get_recent(self, n: int = 50) -> list[MemoryRecord]:
+        """Get the n most recent memory records.
+
+        Args:
+            n: Number of recent records to retrieve
+
+        Returns:
+            List of up to n most recent MemoryRecords
+        """
+        return self.records[-n:]
+
+    def get_by_id(self, memory_id: str) -> MemoryRecord | None:
+        """Find a memory record by its ID.
+
+        Args:
+            memory_id: ID of the memory to find
+
+        Returns:
+            The MemoryRecord if found, None otherwise
+        """
+        for record in self.records:
+            if record.id == memory_id:
+                return record
+        return None
+
+    def get_cumulative_importance_since_last_reflection(self) -> int:
+        """Calculate sum of importance since the last reflection.
+
+        Used to determine when to trigger a new reflection. Sums the importance
+        scores of all records added since the most recent reflection-type record.
+
+        Returns:
+            Cumulative importance score
+        """
+        # Find the index of the last reflection
+        last_reflection_idx = -1
+        for i in range(len(self.records) - 1, -1, -1):
+            if self.records[i].type == "reflection":
+                last_reflection_idx = i
+                break
+
+        # Sum importance from records after last reflection
+        cumulative = 0
+        for i in range(last_reflection_idx + 1, len(self.records)):
+            cumulative += self.records[i].importance
+
+        return cumulative
+
+    def _load_from_file(self) -> list[MemoryRecord]:
+        """Load memory records from the stream.md file.
+
+        Returns:
+            List of MemoryRecords parsed from file, or empty list if file doesn't exist
+        """
+        stream_path = MEMORY_DIR / self.agent_id / "stream.md"
+        content = read_markdown_file(stream_path)
+
+        if not content:
+            return []
+
+        records = []
+        # Split on record boundaries (looking for pattern: \n---\nid:)
+        # Each record starts with --- followed by metadata
+        record_starts = []
+        lines = content.split('\n')
+
+        for i, line in enumerate(lines):
+            if line.strip() == '---' and i + 1 < len(lines) and lines[i + 1].startswith('id:'):
+                record_starts.append(i)
+
+        # Process each record
+        for idx, start in enumerate(record_starts):
+            # Find end of this record (start of next record or end of file)
+            if idx + 1 < len(record_starts):
+                end = record_starts[idx + 1]
+            else:
+                end = len(lines)
+
+            # Extract record lines
+            record_lines = lines[start:end]
+
+            # Find the second --- which separates metadata from content
+            metadata_end = -1
+            for i in range(1, len(record_lines)):
+                if record_lines[i].strip() == '---':
+                    metadata_end = i
+                    break
+
+            if metadata_end == -1:
+                continue
+
+            # Parse metadata (between first and second ---)
+            metadata = {}
+            for line in record_lines[1:metadata_end]:
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    metadata[key.strip()] = value.strip()
+
+            # Extract content (after second ---)
+            content_lines = record_lines[metadata_end + 1:]
+            content_text = '\n'.join(content_lines).strip()
+
+            # Parse evidence as JSON list
+            evidence_str = metadata.get('evidence', '[]')
+            try:
+                evidence = json.loads(evidence_str)
+            except json.JSONDecodeError:
+                evidence = []
+
+            # Create MemoryRecord
+            record = MemoryRecord(
+                id=metadata.get('id', ''),
+                timestamp=metadata.get('timestamp', ''),
+                type=metadata.get('type', ''),
+                discussion_id=metadata.get('discussion_id', ''),
+                importance=int(metadata.get('importance', 1)),
+                content=content_text,
+                last_accessed=metadata.get('last_accessed', ''),
+                evidence=evidence
+            )
+            records.append(record)
+
+        return records
+
+    def _append_to_file(self, record: MemoryRecord) -> None:
+        """Append a memory record to the stream.md file.
+
+        Args:
+            record: The MemoryRecord to persist
+        """
+        stream_path = MEMORY_DIR / self.agent_id / "stream.md"
+
+        # Format evidence as JSON list
+        evidence_json = json.dumps(record.evidence)
+
+        # Build the record text
+        record_text = f"""---
+id: {record.id}
+timestamp: {record.timestamp}
+type: {record.type}
+discussion_id: {record.discussion_id}
+importance: {record.importance}
+last_accessed: {record.last_accessed}
+evidence: {evidence_json}
+---
+
+{record.content}
+
+"""
+
+        append_to_file(stream_path, record_text)
