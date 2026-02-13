@@ -8,8 +8,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from agora.config import MEMORY_DIR
-from agora.utils import append_to_file, generate_id, now_iso, read_markdown_file
+from agora.config import MEMORY_DIR, DECAY_FACTOR, DEFAULT_TOP_K
+from agora.ollama_client import embed
+from agora.utils import append_to_file, cosine_similarity, generate_id, now_iso, read_markdown_file, write_markdown_file
 
 
 @dataclass
@@ -135,6 +136,140 @@ class MemoryStream:
             cumulative += self.records[i].importance
 
         return cumulative
+
+    def retrieve(self, query: str, k: int = DEFAULT_TOP_K) -> list[MemoryRecord]:
+        """Retrieve top-k memory records most relevant to a query.
+
+        Scores records using composite score (recency + importance + relevance).
+        Updates last_accessed timestamps on retrieved records and persists changes.
+
+        Args:
+            query: Query text to search for
+            k: Number of top records to retrieve (default: DEFAULT_TOP_K)
+
+        Returns:
+            List of up to k MemoryRecords sorted by descending composite score
+        """
+        if not self.records:
+            return []
+
+        # Embed the query once
+        query_embedding = embed(query)[0]
+
+        # Score all records
+        scored_records = []
+        for record in self.records:
+            recency = self._recency_score(record, self.records)
+            importance = self._importance_score(record)
+            relevance = self._relevance_score(record, query_embedding)
+            composite = self._composite_score(recency, importance, relevance)
+            scored_records.append((composite, record))
+
+        # Sort by descending score and take top-k
+        scored_records.sort(key=lambda x: x[0], reverse=True)
+        top_records = [record for _, record in scored_records[:k]]
+
+        # Update last_accessed timestamps
+        current_time = now_iso()
+        for record in top_records:
+            record.last_accessed = current_time
+
+        # Persist updated timestamps
+        self._save_all()
+
+        return top_records
+
+    def _recency_score(self, record: MemoryRecord, all_records: list[MemoryRecord]) -> float:
+        """Calculate recency score based on how many records were added since last access.
+
+        Args:
+            record: The memory record to score
+            all_records: All records in the stream (for counting records since last access)
+
+        Returns:
+            Recency score in (0, 1], where 1 is most recent
+        """
+        # Count records added since this record was last accessed
+        records_since = 0
+        for r in all_records:
+            # Compare timestamps: if record was added after our record's last_accessed
+            if r.timestamp > record.last_accessed:
+                records_since += 1
+
+        # Apply exponential decay: 0.995^n
+        score = DECAY_FACTOR ** records_since
+        return score
+
+    def _importance_score(self, record: MemoryRecord) -> float:
+        """Calculate importance score normalized to [0.1, 1.0].
+
+        Args:
+            record: The memory record to score
+
+        Returns:
+            Importance score (importance / 10.0)
+        """
+        return record.importance / 10.0
+
+    def _relevance_score(self, record: MemoryRecord, query_embedding: list[float]) -> float:
+        """Calculate relevance score based on semantic similarity to query.
+
+        Args:
+            record: The memory record to score
+            query_embedding: Pre-computed embedding vector for the query
+
+        Returns:
+            Cosine similarity score in [-1, 1] (typically [0, 1] for text)
+        """
+        # Embed the record's content
+        record_embedding = embed(record.content)[0]
+
+        # Compute cosine similarity
+        similarity = cosine_similarity(record_embedding, query_embedding)
+        return similarity
+
+    def _composite_score(self, recency: float, importance: float, relevance: float) -> float:
+        """Combine recency, importance, and relevance into composite score.
+
+        Args:
+            recency: Recency score
+            importance: Importance score
+            relevance: Relevance score
+
+        Returns:
+            Composite score (equal weights: 1.0 * recency + 1.0 * importance + 1.0 * relevance)
+        """
+        return 1.0 * recency + 1.0 * importance + 1.0 * relevance
+
+    def _save_all(self) -> None:
+        """Rewrite the entire stream.md file with current records.
+
+        Used after retrieval to persist updated last_accessed timestamps.
+        """
+        stream_path = MEMORY_DIR / self.agent_id / "stream.md"
+
+        # Build the full file content
+        content_parts = []
+        for record in self.records:
+            evidence_json = json.dumps(record.evidence)
+            record_text = f"""---
+id: {record.id}
+timestamp: {record.timestamp}
+type: {record.type}
+discussion_id: {record.discussion_id}
+importance: {record.importance}
+last_accessed: {record.last_accessed}
+evidence: {evidence_json}
+---
+
+{record.content}
+
+"""
+            content_parts.append(record_text)
+
+        # Write entire file
+        full_content = ''.join(content_parts)
+        write_markdown_file(stream_path, full_content)
 
     def _load_from_file(self) -> list[MemoryRecord]:
         """Load memory records from the stream.md file.
