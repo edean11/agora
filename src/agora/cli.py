@@ -304,26 +304,84 @@ def cmd_reflect(args) -> None:
 
 
 def _interactive_loop(discussion: Discussion) -> None:
-    """Interactive discussion loop (placeholder for task 21).
+    """Interactive discussion loop with real-time display.
 
     Args:
         discussion: Discussion instance
-    """
-    # Placeholder - this will be implemented in task 21
-    # For now, just provide a simple loop
-    while True:
-        user_input = discussion.print_user_prompt()
-        action = discussion.handle_user_input(user_input)
 
-        if action == "done":
-            print("Discussion completed.")
-            break
-        elif action == "continue":
-            # Run more rounds
-            discussion.run_rounds(DEFAULT_ROUNDS_PER_BATCH)
-        elif action == "message":
-            # User added a message, run one more round
-            discussion.run_rounds(1)
+    Handles:
+        - User input (messages, continue, done)
+        - KeyboardInterrupt (Ctrl+C) for clean exit
+        - Discussion finished detection
+        - Status updates on exit
+    """
+    try:
+        while True:
+            # Print blank line separator
+            print()
+
+            # Get user input
+            user_input = discussion.print_user_prompt()
+
+            # Handle user input
+            action = discussion.handle_user_input(user_input)
+
+            if action == "done":
+                print("\nDiscussion completed.")
+                break
+            elif action == "continue":
+                # Run more rounds
+                try:
+                    discussion.run_rounds(DEFAULT_ROUNDS_PER_BATCH)
+                except OllamaConnectionError:
+                    print("\nError: Lost connection to Ollama.")
+                    print("Save and exit? (y/n): ", end="")
+                    sys.stdout.flush()
+                    response = input().strip().lower()
+                    if response in ("y", "yes", ""):
+                        discussion.update_status("paused")
+                        print("Discussion paused. Resume with: agora continue " + discussion.discussion_id)
+                        break
+                    else:
+                        print("Continuing anyway...")
+                        continue
+            elif action == "message":
+                # User added a message, run more rounds
+                try:
+                    discussion.run_rounds(DEFAULT_ROUNDS_PER_BATCH)
+                except OllamaConnectionError:
+                    print("\nError: Lost connection to Ollama.")
+                    print("Save and exit? (y/n): ", end="")
+                    sys.stdout.flush()
+                    response = input().strip().lower()
+                    if response in ("y", "yes", ""):
+                        discussion.update_status("paused")
+                        print("Discussion paused. Resume with: agora continue " + discussion.discussion_id)
+                        break
+                    else:
+                        print("Continuing anyway...")
+                        continue
+
+            # Check if discussion is finished
+            if discussion.is_finished():
+                print("\nAll agents have declined to speak.")
+                print("Continue anyway? (y/n): ", end="")
+                sys.stdout.flush()
+                response = input().strip().lower()
+                if response not in ("y", "yes"):
+                    discussion.update_status("completed")
+                    print("Discussion ended.")
+                    break
+                else:
+                    # Reset consecutive silence to allow continuing
+                    discussion.consecutive_silence = 0
+
+    except KeyboardInterrupt:
+        # Clean exit on Ctrl+C
+        print("\n\nDiscussion interrupted.")
+        discussion.update_status("paused")
+        print(f"Progress saved. Resume with: agora continue {discussion.discussion_id}")
+        sys.exit(0)
 
 
 def main() -> None:

@@ -355,27 +355,17 @@ class Discussion:
             content: The message content
             timestamp: Timestamp of the message
         """
-        # Find the agent to get persona info
-        agent = None
-        for a in self.agents:
-            if a.name == speaker:
-                agent = a
-                break
-
-        # Format speaker line with role/background
-        if agent:
-            role_info = agent.persona.background[:80]  # Truncate if too long
-            speaker_line = f"[{timestamp}] {speaker} ({role_info}):"
-        else:
-            speaker_line = f"[{timestamp}] {speaker}:"
+        # Format speaker line (simple format: [HH:MM] Name:)
+        speaker_line = f"[{timestamp}] {speaker}:"
 
         # Print formatted message
         print(speaker_line)
         print(content)
         print()  # Empty line after message
+        sys.stdout.flush()  # Ensure real-time display
 
     def add_user_message(self, content: str) -> None:
-        """Record user's message in transcript.
+        """Record user's message in transcript and display it.
 
         Args:
             content: The user's message content
@@ -383,6 +373,10 @@ class Discussion:
         # Record in transcript via add_message
         # add_message already handles agent observations with memory_type="user_interaction"
         self.add_message("User", content)
+
+        # Print the user's message for confirmation
+        timestamp = self.transcript[-1]['timestamp']
+        self._print_message("User", content, timestamp)
 
     def is_finished(self) -> bool:
         """Check if the discussion should be considered finished.
@@ -447,6 +441,8 @@ Status: {status}"""
     def print_header(self) -> None:
         """Print the discussion header."""
         participant_names = ", ".join(agent.name for agent in self.agents)
+
+        # Use simple format that works for any topic length
         print(f"\n=== Agora: {self.topic} ===")
         print(f"Participants: {participant_names}\n")
         sys.stdout.flush()
