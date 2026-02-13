@@ -9,6 +9,7 @@ from agora.memory import MemoryRecord, MemoryStream, heuristic_importance
 from agora.persona import Persona, list_personas, load_persona
 from agora.prompts import persona_summary, willingness_prompt, response_generation_prompt, ask_prompt
 from agora import ollama_client
+from agora.utils import cosine_similarity
 
 
 class Agent:
@@ -185,11 +186,19 @@ class Agent:
 
         # Calculate engagement score (average relevance of retrieved memories)
         if memories:
-            # Engagement score is based on how relevant the agent's memories are
-            # We use the last_accessed field to track retrieval scores
-            # For now, we'll compute an average based on recency and importance
-            total_score = sum(m.importance for m in memories)
-            engagement_score = total_score / (len(memories) * 10.0)  # Normalize to 0-1
+            # Engagement score is based on relevance (cosine similarity)
+            # Embed the discussion topic once
+            query_embedding = ollama_client.embed(discussion_topic)[0]
+
+            # Compute relevance for each memory
+            total_relevance = 0.0
+            for memory in memories:
+                memory_embedding = ollama_client.embed(memory.content)[0]
+                relevance = cosine_similarity(memory_embedding, query_embedding)
+                total_relevance += relevance
+
+            # Average relevance across all retrieved memories
+            engagement_score = total_relevance / len(memories)
         else:
             engagement_score = 0.0
 
