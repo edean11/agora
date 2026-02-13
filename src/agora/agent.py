@@ -7,7 +7,8 @@ and participate in discussions via observation and response generation.
 from agora.config import DEFAULT_TOP_K, REFLECTION_THRESHOLD
 from agora.memory import MemoryRecord, MemoryStream, heuristic_importance
 from agora.persona import Persona, list_personas, load_persona
-from agora.prompts import persona_summary
+from agora.prompts import persona_summary, willingness_prompt, response_generation_prompt, ask_prompt
+from agora import ollama_client
 
 
 class Agent:
@@ -141,6 +142,156 @@ class Agent:
             List of up to k most relevant MemoryRecords
         """
         return self.memory_stream.retrieve(query, k)
+
+    def _format_memories(self, memories: list[MemoryRecord]) -> str:
+        """Format a list of memory records into a readable string for prompt injection.
+
+        Args:
+            memories: List of MemoryRecord objects to format
+
+        Returns:
+            Formatted string with one memory per line
+        """
+        if not memories:
+            return ""
+
+        lines = []
+        for memory in memories:
+            # Format timestamp (already in ISO format, extract date and time)
+            # ISO format: "2024-01-15T14:30:00"
+            timestamp = memory.timestamp[:16].replace('T', ' ')  # "2024-01-15 14:30"
+
+            # Include type for reflections
+            if memory.type == "reflection":
+                lines.append(f"[{timestamp}] [REFLECTION] {memory.content}")
+            else:
+                lines.append(f"[{timestamp}] {memory.content}")
+
+        return "\n".join(lines)
+
+    def decide_to_respond(self, discussion_topic: str, recent_transcript: str) -> tuple[bool, float]:
+        """Determine if this agent wants to speak in the current round.
+
+        Args:
+            discussion_topic: The topic being discussed
+            recent_transcript: Recent statements from the discussion
+
+        Returns:
+            Tuple of (willing: bool, engagement_score: float)
+            engagement_score is the average relevance of retrieved memories
+        """
+        # Retrieve relevant memories
+        memories = self.get_relevant_memories(discussion_topic)
+
+        # Calculate engagement score (average relevance of retrieved memories)
+        if memories:
+            # Engagement score is based on how relevant the agent's memories are
+            # We use the last_accessed field to track retrieval scores
+            # For now, we'll compute an average based on recency and importance
+            total_score = sum(m.importance for m in memories)
+            engagement_score = total_score / (len(memories) * 10.0)  # Normalize to 0-1
+        else:
+            engagement_score = 0.0
+
+        # Format memories for prompt
+        formatted_memories = self._format_memories(memories)
+
+        # Get LLM decision
+        messages = willingness_prompt(
+            self.persona_summary_text,
+            discussion_topic,
+            recent_transcript,
+            formatted_memories
+        )
+
+        try:
+            response = ollama_client.chat(messages)
+
+            # Parse YES/NO from response (case-insensitive)
+            response_upper = response.upper()
+            if "YES" in response_upper:
+                willing = True
+            elif "NO" in response_upper:
+                willing = False
+            else:
+                # Ambiguous response, default to NO
+                willing = False
+
+            return (willing, engagement_score)
+
+        except ollama_client.OllamaConnectionError:
+            # If LLM is unavailable, default to not responding
+            return (False, engagement_score)
+
+    def generate_response(self, discussion_topic: str, recent_transcript: str, discussion_id: str) -> str:
+        """Generate an in-character discussion response.
+
+        Args:
+            discussion_topic: The topic being discussed
+            recent_transcript: Recent statements from the discussion
+            discussion_id: ID of the discussion (for memory recording)
+
+        Returns:
+            The LLM-generated response string
+        """
+        # Retrieve relevant memories
+        memories = self.get_relevant_memories(discussion_topic)
+
+        # Format memories for prompt
+        formatted_memories = self._format_memories(memories)
+
+        # Generate response via LLM
+        messages = response_generation_prompt(
+            self.persona_summary_text,
+            discussion_topic,
+            recent_transcript,
+            formatted_memories
+        )
+
+        response = ollama_client.chat(messages)
+
+        # Record own statement in memory
+        self.observe_own_statement(response, discussion_id)
+
+        return response
+
+    def answer_question(self, question: str) -> str:
+        """Answer a direct question outside of discussion context.
+
+        For `agora ask` command: answer a user question and record it as
+        a user_interaction type memory.
+
+        Args:
+            question: The question to answer
+
+        Returns:
+            The LLM-generated answer
+        """
+        # Retrieve relevant memories
+        memories = self.get_relevant_memories(question)
+
+        # Format memories for prompt
+        formatted_memories = self._format_memories(memories)
+
+        # Generate answer via LLM
+        messages = ask_prompt(
+            self.persona_summary_text,
+            question,
+            formatted_memories
+        )
+
+        response = ollama_client.chat(messages)
+
+        # Record as user_interaction type memory
+        # Use special discussion_id for direct questions
+        self.observe(
+            content=f"Question: {question}\nAnswer: {response}",
+            discussion_id="direct_question",
+            speaker="User",
+            memory_type="user_interaction"
+        )
+
+        return response
 
     @property
     def name(self) -> str:
