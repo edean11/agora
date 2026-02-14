@@ -3,11 +3,15 @@
 Defines paths, model names, and tuning parameters for the discussion forum.
 """
 
+import os
 from pathlib import Path
 
-# Path constants
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-DATA_DIR = PROJECT_ROOT / "data"
+# Path constants — support monorepo layout with data/ at root
+_PACKAGE_DIR = Path(__file__).resolve().parent  # backend/src/agora/
+_BACKEND_DIR = _PACKAGE_DIR.parent.parent  # backend/
+_MONOREPO_ROOT = _BACKEND_DIR.parent  # project root
+
+DATA_DIR = Path(os.environ.get("AGORA_DATA_DIR", str(_MONOREPO_ROOT / "data")))
 AGENTS_DIR = DATA_DIR / "agents"
 DISCUSSIONS_DIR = DATA_DIR / "discussions"
 MEMORY_DIR = DATA_DIR / "memory"

@@ -5,10 +5,14 @@ description = "A local CLI discussion forum powered by AI agents"
 requires-python = ">=3.11"
 dependencies = [
     "httpx",
+    "fastapi",
+    "uvicorn[standard]",
+    "websockets",
 ]
 
 [project.scripts]
 agora = "agora.cli:main"
+agora-api = "agora.api.server:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -46,7 +50,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "src/agora/prompts.py" = ["E501"]
-".df/*" = ["ALL"]
+"backend/.df/*" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agora"]
@@ -77,4 +81,8 @@ disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
 module = ["agora.prompts", "agora.cli", "agora.discussion", "agora.reflection", "agora.agent"]
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["agora.api", "agora.api.*"]
 disallow_untyped_defs = false
