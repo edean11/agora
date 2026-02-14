@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-parchment: #FAF6F0;
+  --color-marble-light: #F5F0EB;
+  --color-marble: #EDE6DD;
+  --color-marble-dark: #D8CFC3;
+  --color-gold-light: #D4AF37;
+  --color-gold: #C9A84C;
+  --color-gold-dark: #A88B3D;
+  --color-terracotta-light: #D4896E;
+  --color-terracotta: #C67B5C;
+  --color-terracotta-dark: #A8624A;
+  --color-olive-light: #5E7A4B;
+  --color-olive: #4A5D3A;
+  --color-olive-dark: #3A4A2E;
+  --color-charcoal-light: #4A4A4A;
+  --color-charcoal: #2C2C2C;
+  --color-charcoal-dark: #1A1A1A;
+  --color-burgundy: #6B2D3E;
+
+  /* Fonts */
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Cormorant Garamond', serif;
+  --font-sans: 'Inter', sans-serif;
+
+  /* Custom spacing, etc. */
+  --font-size-display: 2.5rem;
+}
+
+/* Base styles */
+body {
+  @apply bg-parchment text-charcoal;
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
