@@ -4,9 +4,10 @@ import type { TranscriptEntry } from '../../api/types'
 interface MessageBubbleProps {
   message: TranscriptEntry
   isUser?: boolean
+  animationDelay?: number
 }
 
-function MessageBubble({ message, isUser = false }: MessageBubbleProps) {
+function MessageBubble({ message, isUser = false, animationDelay = 0 }: MessageBubbleProps) {
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
     return date.toLocaleTimeString('en-US', {
@@ -18,6 +19,7 @@ function MessageBubble({ message, isUser = false }: MessageBubbleProps) {
   return (
     <div
       className={`flex items-start gap-3 animate-fade-in ${isUser ? 'flex-row-reverse' : ''}`}
+      style={{ animationDelay: `${animationDelay}ms` }}
     >
       <AgentAvatar name={message.speaker} isUser={isUser} />
       <div className={`flex-1 space-y-1 ${isUser ? 'text-right' : ''}`}>

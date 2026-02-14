@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import MessageBubble from './MessageBubble'
 import ThinkingIndicator from './ThinkingIndicator'
 import RoundDivider from './RoundDivider'
@@ -16,14 +16,20 @@ function TranscriptView({
   rounds,
 }: TranscriptViewProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [previousMessageCount, setPreviousMessageCount] = useState(0)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, thinkingAgent])
 
+  useEffect(() => {
+    setPreviousMessageCount(messages.length)
+  }, [messages])
+
   const renderContent = () => {
     const elements: ReactElement[] = []
     let messageIndex = 0
+    let newMessageDelayCounter = 0
 
     // Merge messages and round dividers
     for (let i = 0; i < rounds.length; i++) {
@@ -33,11 +39,20 @@ function TranscriptView({
       while (messageIndex < index && messageIndex < messages.length) {
         const message = messages[messageIndex]
         const isUser = message.speaker.toLowerCase() === 'user'
+
+        // Only apply staggering to new messages (those added in the current batch)
+        const isNewMessage = messageIndex >= previousMessageCount
+        const animationDelay = isNewMessage ? newMessageDelayCounter * 100 : 0
+        if (isNewMessage) {
+          newMessageDelayCounter++
+        }
+
         elements.push(
           <MessageBubble
             key={`message-${messageIndex}`}
             message={message}
             isUser={isUser}
+            animationDelay={animationDelay}
           />
         )
         messageIndex++
@@ -51,11 +66,20 @@ function TranscriptView({
     while (messageIndex < messages.length) {
       const message = messages[messageIndex]
       const isUser = message.speaker.toLowerCase() === 'user'
+
+      // Only apply staggering to new messages (those added in the current batch)
+      const isNewMessage = messageIndex >= previousMessageCount
+      const animationDelay = isNewMessage ? newMessageDelayCounter * 100 : 0
+      if (isNewMessage) {
+        newMessageDelayCounter++
+      }
+
       elements.push(
         <MessageBubble
           key={`message-${messageIndex}`}
           message={message}
           isUser={isUser}
+          animationDelay={animationDelay}
         />
       )
       messageIndex++
