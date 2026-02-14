@@ -8,22 +8,27 @@ Implements the reflection pipeline from the Generative Agents paper:
 5. Store reflections as memory records
 """
 
-from pathlib import Path
+from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from agora.agent import Agent
+
+from agora import ollama_client
 from agora.config import (
-    REFLECTION_THRESHOLD,
-    REFLECTION_RECENT_COUNT,
-    REFLECTION_QUESTIONS,
-    REFLECTION_EVIDENCE_PER_QUESTION,
     MEMORY_DIR,
+    REFLECTION_EVIDENCE_PER_QUESTION,
+    REFLECTION_QUESTIONS,
+    REFLECTION_RECENT_COUNT,
+    REFLECTION_THRESHOLD,
 )
 from agora.memory import MemoryRecord
-from agora import ollama_client
 from agora.prompts import reflection_questions_prompt, reflection_synthesis_prompt
-from agora.utils import append_to_file, now_iso, read_markdown_file
+from agora.utils import append_to_file, read_markdown_file
 
 
-def should_reflect(agent: "Agent") -> bool:
+def should_reflect(agent: Agent) -> bool:
     """Check if agent should trigger reflection based on cumulative importance.
 
     Args:
@@ -36,7 +41,7 @@ def should_reflect(agent: "Agent") -> bool:
     return cumulative >= REFLECTION_THRESHOLD
 
 
-def reflect(agent: "Agent") -> list[MemoryRecord]:
+def reflect(agent: Agent) -> list[MemoryRecord]:
     """Execute the full reflection process.
 
     Generates questions from recent memories, retrieves evidence, synthesizes
@@ -71,10 +76,7 @@ def reflect(agent: "Agent") -> list[MemoryRecord]:
 
     for question in questions:
         # Step 3: Retrieve evidence memories
-        evidence_memories = agent.memory_stream.retrieve(
-            question,
-            k=REFLECTION_EVIDENCE_PER_QUESTION
-        )
+        evidence_memories = agent.memory_stream.retrieve(question, k=REFLECTION_EVIDENCE_PER_QUESTION)
 
         # Edge case: If no evidence found, skip this question
         if not evidence_memories:
@@ -93,17 +95,13 @@ def reflect(agent: "Agent") -> list[MemoryRecord]:
             discussion_id="",  # Cross-discussion
             importance=8,  # Reflections default to 8
             content=insight,
-            evidence=evidence_ids
+            evidence=evidence_ids,
         )
         reflection_records.append(record)
 
         # Also persist to reflections.md file
         _append_to_reflections_file(
-            agent_id=agent.id,
-            timestamp=record.timestamp,
-            question=question,
-            evidence_ids=evidence_ids,
-            insight=insight
+            agent_id=agent.id, timestamp=record.timestamp, question=question, evidence_ids=evidence_ids, insight=insight
         )
 
     return reflection_records
@@ -142,7 +140,7 @@ def _format_memories_for_questions(memories: list[MemoryRecord]) -> str:
     lines = []
     for memory in memories:
         # Format timestamp (extract date and time)
-        timestamp = memory.timestamp[:16].replace('T', ' ')  # "2024-01-15 14:30"
+        timestamp = memory.timestamp[:16].replace("T", " ")  # "2024-01-15 14:30"
 
         # Include type prefix for reflections
         if memory.type == "reflection":
@@ -168,7 +166,7 @@ def _format_memories_for_synthesis(memories: list[MemoryRecord]) -> str:
     lines = []
     for memory in memories:
         # Format timestamp
-        timestamp = memory.timestamp[:16].replace('T', ' ')
+        timestamp = memory.timestamp[:16].replace("T", " ")
 
         # Include memory ID for evidence tracing
         lines.append(f"[{memory.id}] [{timestamp}] {memory.content}")
@@ -191,7 +189,7 @@ def _parse_questions(llm_response: str) -> list[str]:
         List of parsed question strings (up to REFLECTION_QUESTIONS)
     """
     questions = []
-    lines = llm_response.strip().split('\n')
+    lines = llm_response.strip().split("\n")
 
     for line in lines:
         # Strip whitespace
@@ -203,7 +201,7 @@ def _parse_questions(llm_response: str) -> list[str]:
 
         # Remove numbering (e.g., "1.", "2)", "3 -", etc.)
         # Match patterns like: "1.", "1)", "1 -", "1:", etc.
-        line = line.lstrip('0123456789').lstrip('.)- :').strip()
+        line = line.lstrip("0123456789").lstrip(".)- :").strip()
 
         # If we have content, add it
         if line:
@@ -217,11 +215,7 @@ def _parse_questions(llm_response: str) -> list[str]:
 
 
 def _append_to_reflections_file(
-    agent_id: str,
-    timestamp: str,
-    question: str,
-    evidence_ids: list[str],
-    insight: str
+    agent_id: str, timestamp: str, question: str, evidence_ids: list[str], insight: str
 ) -> None:
     """Append a reflection to the agent's reflections.md file.
 

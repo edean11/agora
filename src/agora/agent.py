@@ -4,11 +4,11 @@ Agents have psychologically grounded personas, maintain memory streams,
 and participate in discussions via observation and response generation.
 """
 
+from agora import ollama_client
 from agora.config import DEFAULT_TOP_K, REFLECTION_THRESHOLD
 from agora.memory import MemoryRecord, MemoryStream, heuristic_importance
-from agora.persona import Persona, list_personas, load_persona
-from agora.prompts import persona_summary, willingness_prompt, response_generation_prompt, ask_prompt
-from agora import ollama_client
+from agora.persona import list_personas, load_persona
+from agora.prompts import ask_prompt, persona_summary, response_generation_prompt, willingness_prompt
 from agora.utils import cosine_similarity
 
 
@@ -58,13 +58,7 @@ class Agent:
         # Reflection flag (checked by reflection.py and discussion.py)
         self._reflection_needed = False
 
-    def observe(
-        self,
-        content: str,
-        discussion_id: str,
-        speaker: str,
-        memory_type: str = "observation"
-    ) -> MemoryRecord:
+    def observe(self, content: str, discussion_id: str, speaker: str, memory_type: str = "observation") -> MemoryRecord:
         """Record what someone else said or a user interaction.
 
         Formats content with speaker attribution, rates importance heuristically,
@@ -87,10 +81,7 @@ class Agent:
 
         # Add to memory stream
         record = self.memory_stream.add_record(
-            type=memory_type,
-            discussion_id=discussion_id,
-            importance=importance,
-            content=formatted_content
+            type=memory_type, discussion_id=discussion_id, importance=importance, content=formatted_content
         )
 
         # Check reflection trigger
@@ -101,6 +92,7 @@ class Agent:
         # Trigger reflection if needed
         if self._reflection_needed:
             from agora import reflection
+
             print(f"  [{self.name} is reflecting...]")
             reflection.reflect(self)
             self._reflection_needed = False
@@ -124,10 +116,7 @@ class Agent:
 
         # Add to memory stream
         record = self.memory_stream.add_record(
-            type="own_statement",
-            discussion_id=discussion_id,
-            importance=importance,
-            content=content
+            type="own_statement", discussion_id=discussion_id, importance=importance, content=content
         )
 
         # Check reflection trigger
@@ -138,6 +127,7 @@ class Agent:
         # Trigger reflection if needed
         if self._reflection_needed:
             from agora import reflection
+
             print(f"  [{self.name} is reflecting...]")
             reflection.reflect(self)
             self._reflection_needed = False
@@ -174,7 +164,7 @@ class Agent:
         for memory in memories:
             # Format timestamp (already in ISO format, extract date and time)
             # ISO format: "2024-01-15T14:30:00"
-            timestamp = memory.timestamp[:16].replace('T', ' ')  # "2024-01-15 14:30"
+            timestamp = memory.timestamp[:16].replace("T", " ")  # "2024-01-15 14:30"
 
             # Include type for reflections
             if memory.type == "reflection":
@@ -221,10 +211,7 @@ class Agent:
 
         # Get LLM decision
         messages = willingness_prompt(
-            self.persona_summary_text,
-            discussion_topic,
-            recent_transcript,
-            formatted_memories
+            self.persona_summary_text, discussion_topic, recent_transcript, formatted_memories
         )
 
         try:
@@ -265,10 +252,7 @@ class Agent:
 
         # Generate response via LLM
         messages = response_generation_prompt(
-            self.persona_summary_text,
-            discussion_topic,
-            recent_transcript,
-            formatted_memories
+            self.persona_summary_text, discussion_topic, recent_transcript, formatted_memories
         )
 
         response = ollama_client.chat(messages)
@@ -297,11 +281,7 @@ class Agent:
         formatted_memories = self._format_memories(memories)
 
         # Generate answer via LLM
-        messages = ask_prompt(
-            self.persona_summary_text,
-            question,
-            formatted_memories
-        )
+        messages = ask_prompt(self.persona_summary_text, question, formatted_memories)
 
         response = ollama_client.chat(messages)
 
@@ -311,7 +291,7 @@ class Agent:
             content=f"Question: {question}\nAnswer: {response}",
             discussion_id="direct_question",
             speaker="User",
-            memory_type="user_interaction"
+            memory_type="user_interaction",
         )
 
         return response
@@ -326,6 +306,7 @@ class Agent:
             List of newly created reflection MemoryRecords
         """
         from agora import reflection
+
         return reflection.reflect(self)
 
     def get_reflections(self) -> str:
@@ -335,6 +316,7 @@ class Agent:
             Formatted reflections string
         """
         from agora import reflection
+
         return reflection.format_reflections(self.id)
 
     @property

@@ -24,9 +24,9 @@ def slugify(text: str) -> str:
     # Lowercase
     slug = text.lower()
     # Replace spaces and non-alphanumeric with hyphens
-    slug = re.sub(r'[^a-z0-9]+', '-', slug)
+    slug = re.sub(r"[^a-z0-9]+", "-", slug)
     # Strip leading/trailing hyphens
-    slug = slug.strip('-')
+    slug = slug.strip("-")
     return slug
 
 
@@ -36,7 +36,7 @@ def now_iso() -> str:
     Returns:
         ISO 8601 timestamp string (e.g., "2024-01-15T14:30:00")
     """
-    return datetime.now().isoformat(timespec='seconds')
+    return datetime.now().isoformat(timespec="seconds")
 
 
 def format_timestamp(iso_str: str) -> str:
@@ -66,15 +66,15 @@ def parse_markdown_sections(text: str) -> dict[str, str]:
     """
     sections = {}
     current_heading = None
-    current_content = []
+    current_content: list[str] = []
 
-    for line in text.split('\n'):
+    for line in text.split("\n"):
         # Check for headings (## or ###)
-        match = re.match(r'^(#{2,3})\s+(.+)$', line)
+        match = re.match(r"^(#{2,3})\s+(.+)$", line)
         if match:
             # Save previous section if exists
             if current_heading is not None:
-                sections[current_heading] = '\n'.join(current_content).strip()
+                sections[current_heading] = "\n".join(current_content).strip()
             # Start new section
             current_heading = match.group(2).strip()
             current_content = []
@@ -83,7 +83,7 @@ def parse_markdown_sections(text: str) -> dict[str, str]:
 
     # Save final section
     if current_heading is not None:
-        sections[current_heading] = '\n'.join(current_content).strip()
+        sections[current_heading] = "\n".join(current_content).strip()
 
     return sections
 
@@ -98,8 +98,8 @@ def parse_markdown_field(text: str, field_name: str) -> str:
     Returns:
         Field value, or empty string if not found
     """
-    pattern = rf'^\s*-\s*\*\*{re.escape(field_name)}:\*\*\s*(.+)$'
-    for line in text.split('\n'):
+    pattern = rf"^\s*-\s*\*\*{re.escape(field_name)}:\*\*\s*(.+)$"
+    for line in text.split("\n"):
         match = re.match(pattern, line)
         if match:
             return match.group(1).strip()
@@ -116,8 +116,8 @@ def parse_markdown_list_fields(text: str) -> dict[str, str]:
         Dict mapping field names to values
     """
     fields = {}
-    pattern = r'^\s*-\s*\*\*([^*]+):\*\*\s*(.+)$'
-    for line in text.split('\n'):
+    pattern = r"^\s*-\s*\*\*([^*]+):\*\*\s*(.+)$"
+    for line in text.split("\n"):
         match = re.match(pattern, line)
         if match:
             key = match.group(1).strip()
@@ -134,7 +134,7 @@ def write_markdown_file(path: Path, content: str) -> None:
         content: Content to write
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding='utf-8')
+    path.write_text(content, encoding="utf-8")
 
 
 def read_markdown_file(path: Path) -> str:
@@ -148,7 +148,7 @@ def read_markdown_file(path: Path) -> str:
     """
     if not path.exists():
         return ""
-    return path.read_text(encoding='utf-8')
+    return path.read_text(encoding="utf-8")
 
 
 def append_to_file(path: Path, content: str) -> None:
@@ -159,7 +159,7 @@ def append_to_file(path: Path, content: str) -> None:
         content: Content to append
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open('a', encoding='utf-8') as f:
+    with path.open("a", encoding="utf-8") as f:
         f.write(content)
 
 
@@ -179,7 +179,7 @@ def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
         raise ValueError("Vectors must have same length")
 
     # Compute dot product
-    dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
+    dot_product = sum(a * b for a, b in zip(vec_a, vec_b, strict=True))
 
     # Compute magnitudes
     mag_a = sum(a * a for a in vec_a) ** 0.5
@@ -189,7 +189,7 @@ def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     if mag_a == 0.0 or mag_b == 0.0:
         return 0.0
 
-    return dot_product / (mag_a * mag_b)
+    return float(dot_product / (mag_a * mag_b))
 
 
 def generate_id() -> str:

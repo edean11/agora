@@ -5,12 +5,10 @@ agent memories. All memories are persisted to markdown files in chronological or
 """
 
 import json
-from dataclasses import dataclass
-from pathlib import Path
-
 import re
+from dataclasses import dataclass
 
-from agora.config import MEMORY_DIR, DECAY_FACTOR, DEFAULT_TOP_K
+from agora.config import DECAY_FACTOR, DEFAULT_TOP_K, MEMORY_DIR
 from agora.ollama_client import embed
 from agora.utils import append_to_file, cosine_similarity, generate_id, now_iso, read_markdown_file, write_markdown_file
 
@@ -41,19 +39,19 @@ def heuristic_importance(content: str, context: str = "") -> int:
         score += 1
 
     # Question marks: questions drive discussion
-    question_count = content.count('?')
+    question_count = content.count("?")
     if question_count > 0:
         score += 1
         if question_count > 2:
             score += 1
 
     # Exclamation marks: emotional intensity
-    if '!' in content:
+    if "!" in content:
         score += 1
 
     # Named entities / proper nouns: capitalized words mid-sentence
     # Look for capitalized words that aren't at the start of sentences
-    sentences = re.split(r'[.!?]+', content)
+    sentences = re.split(r"[.!?]+", content)
     for sentence in sentences:
         words = sentence.strip().split()
         # Check for capitalized words beyond the first word
@@ -66,33 +64,43 @@ def heuristic_importance(content: str, context: str = "") -> int:
 
     # Disagreement signals: conflict is memorable
     disagreement_words = [
-        'disagree', 'but', 'however', 'wrong', 'contrary',
-        'push back', 'challenge', 'oppose', 'refute'
+        "disagree",
+        "but",
+        "however",
+        "wrong",
+        "contrary",
+        "push back",
+        "challenge",
+        "oppose",
+        "refute",
     ]
     if any(word in content_lower for word in disagreement_words):
         score += 1
 
     # Agreement signals: less memorable but still notable
     # Use word boundaries to avoid matching "agree" in "disagree"
-    agreement_words = ['agree', 'exactly', 'right', 'yes']
+    agreement_words = ["agree", "exactly", "right", "yes"]
     # Check for whole word matches to avoid substring false positives
     # (e.g., "disagree" should not trigger "agree" bonus)
-    content_words = re.findall(r'\b\w+\b', content_lower)
+    content_words = re.findall(r"\b\w+\b", content_lower)
     if any(word in content_words for word in agreement_words):
         score += 0.5
 
     # Self-reference: personal stakes
-    self_reference_phrases = [
-        'i think', 'i believe', 'in my experience',
-        'i feel', 'my view', 'personally'
-    ]
+    self_reference_phrases = ["i think", "i believe", "in my experience", "i feel", "my view", "personally"]
     if any(phrase in content_lower for phrase in self_reference_phrases):
         score += 1
 
     # Reflection-type content: high value
     reflection_phrases = [
-        'realize', 'upon reflection', "i've come to", 'i have come to',
-        'changed my mind', 'reconsidered', 'rethinking', 'reconsider'
+        "realize",
+        "upon reflection",
+        "i've come to",
+        "i have come to",
+        "changed my mind",
+        "reconsidered",
+        "rethinking",
+        "reconsider",
     ]
     if any(phrase in content_lower for phrase in reflection_phrases):
         score += 2
@@ -117,6 +125,7 @@ class MemoryRecord:
         last_accessed: ISO 8601 timestamp when memory was last retrieved
         evidence: List of memory IDs that support this memory (for reflections)
     """
+
     id: str
     timestamp: str
     type: str
@@ -145,12 +154,7 @@ class MemoryStream:
         self.records: list[MemoryRecord] = self._load_from_file()
 
     def add_record(
-        self,
-        type: str,
-        discussion_id: str,
-        importance: int,
-        content: str,
-        evidence: list[str] | None = None
+        self, type: str, discussion_id: str, importance: int, content: str, evidence: list[str] | None = None
     ) -> MemoryRecord:
         """Add a new memory record to the stream.
 
@@ -173,7 +177,7 @@ class MemoryStream:
             importance=importance,
             content=content,
             last_accessed=timestamp,
-            evidence=evidence or []
+            evidence=evidence or [],
         )
         self.records.append(record)
         self._append_to_file(record)
@@ -287,7 +291,7 @@ class MemoryStream:
                 records_since += 1
 
         # Apply exponential decay: 0.995^n
-        score = DECAY_FACTOR ** records_since
+        score = DECAY_FACTOR**records_since
         return score
 
     def _importance_score(self, record: MemoryRecord) -> float:
@@ -358,7 +362,7 @@ evidence: {evidence_json}
             content_parts.append(record_text)
 
         # Write entire file
-        full_content = ''.join(content_parts)
+        full_content = "".join(content_parts)
         write_markdown_file(stream_path, full_content)
 
     def _load_from_file(self) -> list[MemoryRecord]:
@@ -377,10 +381,10 @@ evidence: {evidence_json}
         # Split on record boundaries (looking for pattern: \n---\nid:)
         # Each record starts with --- followed by metadata
         record_starts = []
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         for i, line in enumerate(lines):
-            if line.strip() == '---' and i + 1 < len(lines) and lines[i + 1].startswith('id:'):
+            if line.strip() == "---" and i + 1 < len(lines) and lines[i + 1].startswith("id:"):
                 record_starts.append(i)
 
         # Process each record
@@ -397,7 +401,7 @@ evidence: {evidence_json}
             # Find the second --- which separates metadata from content
             metadata_end = -1
             for i in range(1, len(record_lines)):
-                if record_lines[i].strip() == '---':
+                if record_lines[i].strip() == "---":
                     metadata_end = i
                     break
 
@@ -407,16 +411,16 @@ evidence: {evidence_json}
             # Parse metadata (between first and second ---)
             metadata = {}
             for line in record_lines[1:metadata_end]:
-                if ':' in line:
-                    key, value = line.split(':', 1)
+                if ":" in line:
+                    key, value = line.split(":", 1)
                     metadata[key.strip()] = value.strip()
 
             # Extract content (after second ---)
-            content_lines = record_lines[metadata_end + 1:]
-            content_text = '\n'.join(content_lines).strip()
+            content_lines = record_lines[metadata_end + 1 :]
+            content_text = "\n".join(content_lines).strip()
 
             # Parse evidence as JSON list
-            evidence_str = metadata.get('evidence', '[]')
+            evidence_str = metadata.get("evidence", "[]")
             try:
                 evidence = json.loads(evidence_str)
             except json.JSONDecodeError:
@@ -424,14 +428,14 @@ evidence: {evidence_json}
 
             # Create MemoryRecord
             record = MemoryRecord(
-                id=metadata.get('id', ''),
-                timestamp=metadata.get('timestamp', ''),
-                type=metadata.get('type', ''),
-                discussion_id=metadata.get('discussion_id', ''),
-                importance=int(metadata.get('importance', 1)),
+                id=metadata.get("id", ""),
+                timestamp=metadata.get("timestamp", ""),
+                type=metadata.get("type", ""),
+                discussion_id=metadata.get("discussion_id", ""),
+                importance=int(metadata.get("importance", 1)),
                 content=content_text,
-                last_accessed=metadata.get('last_accessed', ''),
-                evidence=evidence
+                last_accessed=metadata.get("last_accessed", ""),
+                evidence=evidence,
             )
             records.append(record)
 

@@ -5,12 +5,13 @@ Provides argparse-based commands for managing discussions, agents, and memory.
 
 import argparse
 import sys
+
 import httpx
 
 from agora.agent import Agent, load_agents
 from agora.config import (
-    DEFAULT_ROUNDS_PER_BATCH,
     AGENTS_DIR,
+    DEFAULT_ROUNDS_PER_BATCH,
     DISCUSSIONS_DIR,
     MEMORY_DIR,
     OLLAMA_BASE_URL,
@@ -37,8 +38,8 @@ def cmd_persona_list(args) -> None:
     print("Agents:")
     for persona in personas:
         # Extract a brief description from background (first sentence or first 60 chars)
-        background_brief = persona.background.split('.')[0][:60]
-        if len(persona.background) > 60 and '.' not in persona.background[:60]:
+        background_brief = persona.background.split(".")[0][:60]
+        if len(persona.background) > 60 and "." not in persona.background[:60]:
             background_brief += "..."
 
         print(f"  {persona.id:12s}  {persona.name} ({background_brief}, Age {persona.age})")
@@ -74,8 +75,8 @@ def cmd_persona_generate(args) -> None:
 
         for persona in personas:
             # Brief description from background
-            background_brief = persona.background.split('.')[0][:80]
-            if len(persona.background.split('.')[0]) > 80:
+            background_brief = persona.background.split(".")[0][:80]
+            if len(persona.background.split(".")[0]) > 80:
                 background_brief += "..."
 
             print(f"Generated: {persona.name} — {background_brief}")
@@ -182,7 +183,7 @@ def cmd_list(args) -> None:
 
     if not discussions:
         print("No discussions found.")
-        print("Start one with: agora discuss \"your topic\"")
+        print('Start one with: agora discuss "your topic"')
         return
 
     print("Discussions:")
@@ -250,7 +251,7 @@ def cmd_memory(args) -> None:
         print(f"\nRecent memories for {agent.name}:")
         for memory in recent_memories:
             # Format timestamp (ISO format: "2024-01-15T14:30:00")
-            timestamp = memory.timestamp[:16].replace('T', ' ')
+            timestamp = memory.timestamp[:16].replace("T", " ")
 
             # Truncate content to 80 characters
             content_truncated = memory.content[:80]
@@ -418,114 +419,67 @@ def main() -> None:
         _ensure_data_directories()
 
         parser = argparse.ArgumentParser(
-            prog="agora",
-            description="Local AI discussion forum powered by generative agents"
+            prog="agora", description="Local AI discussion forum powered by generative agents"
         )
 
         # Create subparsers for top-level commands
         subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
         # === Persona command (with sub-subcommands) ===
-        persona_parser = subparsers.add_parser(
-            "persona",
-            help="Manage agent personas"
-        )
-        persona_subparsers = persona_parser.add_subparsers(
-            dest="persona_command",
-            help="Persona operations"
-        )
+        persona_parser = subparsers.add_parser("persona", help="Manage agent personas")
+        persona_subparsers = persona_parser.add_subparsers(dest="persona_command", help="Persona operations")
 
         # persona list
-        persona_list_parser = persona_subparsers.add_parser(
-            "list",
-            help="List all available personas"
-        )
+        persona_list_parser = persona_subparsers.add_parser("list", help="List all available personas")
         persona_list_parser.set_defaults(func=cmd_persona_list)
 
         # persona add
-        persona_add_parser = persona_subparsers.add_parser(
-            "add",
-            help="Interactively create a new persona"
-        )
+        persona_add_parser = persona_subparsers.add_parser("add", help="Interactively create a new persona")
         persona_add_parser.set_defaults(func=cmd_persona_add)
 
         # persona generate
-        persona_generate_parser = persona_subparsers.add_parser(
-            "generate",
-            help="Auto-generate diverse persona(s)"
-        )
+        persona_generate_parser = persona_subparsers.add_parser("generate", help="Auto-generate diverse persona(s)")
         persona_generate_parser.add_argument(
-            "--n",
-            type=int,
-            default=1,
-            help="Number of personas to generate (default: 1)"
+            "--n", type=int, default=1, help="Number of personas to generate (default: 1)"
         )
         persona_generate_parser.set_defaults(func=cmd_persona_generate)
 
         # === Placeholder commands (task 20) ===
 
         # discuss
-        discuss_parser = subparsers.add_parser(
-            "discuss",
-            help="Start a new discussion"
-        )
+        discuss_parser = subparsers.add_parser("discuss", help="Start a new discussion")
         discuss_parser.add_argument("topic", help="Discussion topic")
+        discuss_parser.add_argument("--agents", nargs="+", help="Specific agent IDs to include (default: all)")
         discuss_parser.add_argument(
-            "--agents",
-            nargs="+",
-            help="Specific agent IDs to include (default: all)"
-        )
-        discuss_parser.add_argument(
-            "--rounds",
-            type=int,
-            default=5,
-            help="Number of auto-rounds before user prompt (default: 5)"
+            "--rounds", type=int, default=5, help="Number of auto-rounds before user prompt (default: 5)"
         )
         discuss_parser.set_defaults(func=cmd_discuss)
 
         # continue
-        continue_parser = subparsers.add_parser(
-            "continue",
-            help="Resume a paused discussion"
-        )
+        continue_parser = subparsers.add_parser("continue", help="Resume a paused discussion")
         continue_parser.add_argument("discussion_id", help="Discussion ID to resume")
         continue_parser.set_defaults(func=cmd_continue)
 
         # list
-        list_parser = subparsers.add_parser(
-            "list",
-            help="List all discussions"
-        )
+        list_parser = subparsers.add_parser("list", help="List all discussions")
         list_parser.set_defaults(func=cmd_list)
 
         # ask
-        ask_parser = subparsers.add_parser(
-            "ask",
-            help="Ask a direct question to an agent"
-        )
+        ask_parser = subparsers.add_parser("ask", help="Ask a direct question to an agent")
         ask_parser.add_argument("agent_id", help="Agent ID to ask")
         ask_parser.add_argument("question", help="Question to ask")
         ask_parser.set_defaults(func=cmd_ask)
 
         # reflect
-        reflect_parser = subparsers.add_parser(
-            "reflect",
-            help="Manually trigger reflection for an agent"
-        )
+        reflect_parser = subparsers.add_parser("reflect", help="Manually trigger reflection for an agent")
         reflect_parser.add_argument("agent_id", help="Agent ID to reflect")
         reflect_parser.set_defaults(func=cmd_reflect)
 
         # memory
-        memory_parser = subparsers.add_parser(
-            "memory",
-            help="View an agent's recent memories"
-        )
+        memory_parser = subparsers.add_parser("memory", help="View an agent's recent memories")
         memory_parser.add_argument("agent_id", help="Agent ID")
         memory_parser.add_argument(
-            "--last",
-            type=int,
-            default=20,
-            help="Number of recent memories to show (default: 20)"
+            "--last", type=int, default=20, help="Number of recent memories to show (default: 20)"
         )
         memory_parser.set_defaults(func=cmd_memory)
 
@@ -538,7 +492,7 @@ def main() -> None:
             sys.exit(0)
 
         # Special handling for persona subcommand without sub-subcommand
-        if args.command == "persona" and not hasattr(args, 'func'):
+        if args.command == "persona" and not hasattr(args, "func"):
             persona_parser.print_help()
             sys.exit(0)
 
@@ -546,10 +500,10 @@ def main() -> None:
         commands_needing_ollama = {"discuss", "continue", "ask", "reflect"}
         persona_commands_needing_ollama = {"generate"}
 
-        needs_ollama = (
-            args.command in commands_needing_ollama
-            or (args.command == "persona" and hasattr(args, 'persona_command')
-                and args.persona_command in persona_commands_needing_ollama)
+        needs_ollama = args.command in commands_needing_ollama or (
+            args.command == "persona"
+            and hasattr(args, "persona_command")
+            and args.persona_command in persona_commands_needing_ollama
         )
 
         if needs_ollama and not _check_ollama_health():
@@ -564,7 +518,7 @@ def main() -> None:
             sys.exit(1)
 
         # Execute the appropriate handler function
-        if hasattr(args, 'func'):
+        if hasattr(args, "func"):
             args.func(args)
         else:
             parser.print_help()

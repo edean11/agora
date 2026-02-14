@@ -7,7 +7,7 @@ import random
 import sys
 
 from agora.agent import Agent, load_agents
-from agora.config import DISCUSSIONS_DIR, DEFAULT_ROUNDS_PER_BATCH, MAX_CONSECUTIVE_SILENCE
+from agora.config import DEFAULT_ROUNDS_PER_BATCH, DISCUSSIONS_DIR, MAX_CONSECUTIVE_SILENCE
 from agora.utils import (
     append_to_file,
     format_timestamp,
@@ -33,12 +33,7 @@ class Discussion:
         consecutive_silence: Rounds where no agent spoke
     """
 
-    def __init__(
-        self,
-        topic: str,
-        agents: list[Agent],
-        discussion_id: str | None = None
-    ):
+    def __init__(self, topic: str, agents: list[Agent], discussion_id: str | None = None):
         """Initialize a Discussion.
 
         Args:
@@ -116,14 +111,14 @@ class Discussion:
 
         # Extract topic from first line (# Topic)
         topic = ""
-        for line in meta_content.split('\n'):
-            if line.startswith('#'):
-                topic = line.lstrip('#').strip()
+        for line in meta_content.split("\n"):
+            if line.startswith("#"):
+                topic = line.lstrip("#").strip()
                 break
 
         # Parse metadata fields
         participants_str = parse_markdown_field(meta_content, "Participants")
-        participant_names = [name.strip() for name in participants_str.split(',')]
+        participant_names = [name.strip() for name in participants_str.split(",")]
 
         # Load agents (convert names to IDs by slugifying)
         agent_ids = [slugify(name) for name in participant_names]
@@ -139,17 +134,17 @@ class Discussion:
         # Parse transcript entries
         # Format: **[14:30] Speaker:**
         # Content
-        lines = transcript_content.split('\n')
+        lines = transcript_content.split("\n")
         i = 0
         while i < len(lines):
             line = lines[i].strip()
             # Look for entry header: **[HH:MM] Speaker:**
-            if line.startswith('**[') and '] ' in line and line.endswith(':**'):
+            if line.startswith("**[") and "] " in line and line.endswith(":**"):
                 # Extract timestamp and speaker
                 # Format: **[14:30] Speaker:**
-                timestamp_end = line.index(']')
+                timestamp_end = line.index("]")
                 timestamp = line[3:timestamp_end]  # Skip '**[' prefix
-                speaker_part = line[timestamp_end+2:-3]  # Skip '] ' prefix and ':**' suffix
+                speaker_part = line[timestamp_end + 2 : -3]  # Skip '] ' prefix and ':**' suffix
                 speaker = speaker_part.strip()
 
                 # Collect content lines until next entry or empty line
@@ -158,19 +153,17 @@ class Discussion:
                 while i < len(lines):
                     next_line = lines[i]
                     # Stop if we hit another entry or an empty separator
-                    if next_line.strip().startswith('**[') or (not next_line.strip() and i + 1 < len(lines) and lines[i + 1].strip().startswith('**[')):
+                    if next_line.strip().startswith("**[") or (
+                        not next_line.strip() and i + 1 < len(lines) and lines[i + 1].strip().startswith("**[")
+                    ):
                         break
                     content_lines.append(next_line)
                     i += 1
 
-                content = '\n'.join(content_lines).strip()
+                content = "\n".join(content_lines).strip()
 
                 # Add to transcript
-                discussion.transcript.append({
-                    "timestamp": timestamp,
-                    "speaker": speaker,
-                    "content": content
-                })
+                discussion.transcript.append({"timestamp": timestamp, "speaker": speaker, "content": content})
             else:
                 i += 1
 
@@ -191,11 +184,7 @@ class Discussion:
         timestamp_display = format_timestamp(timestamp_iso)
 
         # Add to in-memory transcript
-        self.transcript.append({
-            "timestamp": timestamp_display,
-            "speaker": speaker,
-            "content": content
-        })
+        self.transcript.append({"timestamp": timestamp_display, "speaker": speaker, "content": content})
 
         # Format transcript entry
         transcript_entry = f"""
@@ -212,20 +201,14 @@ class Discussion:
             # All agents observe user interactions
             for agent in self.agents:
                 agent.observe(
-                    content=content,
-                    discussion_id=self.discussion_id,
-                    speaker=speaker,
-                    memory_type="user_interaction"
+                    content=content, discussion_id=self.discussion_id, speaker=speaker, memory_type="user_interaction"
                 )
         else:
             # Other agents observe this agent's statement
             for agent in self.agents:
                 if agent.name != speaker:
                     agent.observe(
-                        content=content,
-                        discussion_id=self.discussion_id,
-                        speaker=speaker,
-                        memory_type="observation"
+                        content=content, discussion_id=self.discussion_id, speaker=speaker, memory_type="observation"
                     )
 
     def get_recent_transcript(self, n: int = 10) -> str:
@@ -247,10 +230,10 @@ class Discussion:
         lines = []
         for entry in recent:
             lines.append(f"{entry['timestamp']} {entry['speaker']}:")
-            lines.append(entry['content'])
+            lines.append(entry["content"])
             lines.append("")  # Empty line between entries
 
-        return '\n'.join(lines).strip()
+        return "\n".join(lines).strip()
 
     def run_round(self) -> list[dict]:
         """Execute one complete round of discussion.
@@ -275,7 +258,7 @@ class Discussion:
 
         # Phase 3: Generation - each willing agent generates response in order
         if willing_agents:
-            for agent, engagement_score in willing_agents:
+            for agent, _engagement_score in willing_agents:
                 # Generate response
                 response = agent.generate_response(self.topic, recent_transcript, self.discussion_id)
 
@@ -283,7 +266,7 @@ class Discussion:
                 self.add_message(agent.name, response)
 
                 # Print in real-time
-                timestamp = self.transcript[-1]['timestamp']
+                timestamp = self.transcript[-1]["timestamp"]
                 self._print_message(agent.name, response, timestamp)
 
                 # Track message for return
@@ -310,7 +293,7 @@ class Discussion:
             self.add_message(nudged_agent.name, response)
 
             # Print in real-time
-            timestamp = self.transcript[-1]['timestamp']
+            timestamp = self.transcript[-1]["timestamp"]
             self._print_message(nudged_agent.name, response, timestamp)
 
             # Track message for return
@@ -335,11 +318,11 @@ class Discussion:
         """
         all_messages = []
 
-        for i in range(n):
+        for _i in range(n):
             # Print round separator
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"ROUND {self.round_number + 1}")
-            print(f"{'='*60}\n")
+            print(f"{'=' * 60}\n")
 
             # Run the round
             round_messages = self.run_round()
@@ -375,7 +358,7 @@ class Discussion:
         self.add_message("User", content)
 
         # Print the user's message for confirmation
-        timestamp = self.transcript[-1]['timestamp']
+        timestamp = self.transcript[-1]["timestamp"]
         self._print_message("User", content, timestamp)
 
     def is_finished(self) -> bool:
@@ -399,16 +382,16 @@ class Discussion:
         meta_content = read_markdown_file(meta_path)
 
         # Replace status line
-        lines = meta_content.split('\n')
+        lines = meta_content.split("\n")
         new_lines = []
         for line in lines:
-            if line.startswith('- **Status:**'):
-                new_lines.append(f'- **Status:** {status}')
+            if line.startswith("- **Status:**"):
+                new_lines.append(f"- **Status:** {status}")
             else:
                 new_lines.append(line)
 
         # Write back
-        new_meta_content = '\n'.join(new_lines)
+        new_meta_content = "\n".join(new_lines)
         write_markdown_file(meta_path, new_meta_content)
 
     def get_summary(self) -> str:
@@ -518,21 +501,16 @@ def list_discussions() -> list[dict]:
         # Extract fields
         # Topic from first heading
         topic = ""
-        for line in meta_content.split('\n'):
-            if line.startswith('#'):
-                topic = line.lstrip('#').strip()
+        for line in meta_content.split("\n"):
+            if line.startswith("#"):
+                topic = line.lstrip("#").strip()
                 break
 
         discussion_id = parse_markdown_field(meta_content, "ID")
         created = parse_markdown_field(meta_content, "Created")
         status = parse_markdown_field(meta_content, "Status")
 
-        discussions.append({
-            "id": discussion_id,
-            "topic": topic,
-            "created": created,
-            "status": status
-        })
+        discussions.append({"id": discussion_id, "topic": topic, "created": created, "status": status})
 
     # Sort by creation date (newest first)
     discussions.sort(key=lambda d: d["created"], reverse=True)

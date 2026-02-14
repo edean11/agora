@@ -4,15 +4,17 @@ Provides chat() and embed() functions for LLM inference and text embedding.
 """
 
 import httpx
+
 from agora.config import (
-    OLLAMA_BASE_URL,
     CHAT_MODEL,
     EMBED_MODEL,
+    OLLAMA_BASE_URL,
 )
 
 
 class OllamaConnectionError(Exception):
     """Raised when Ollama connection fails."""
+
     pass
 
 
@@ -49,16 +51,13 @@ def chat(
         response = httpx.post(endpoint, json=payload, timeout=120.0)
         response.raise_for_status()
         data = response.json()
-        return data["message"]["content"]
+        return str(data["message"]["content"])
     except (httpx.ConnectError, httpx.TimeoutException) as e:
         raise OllamaConnectionError(
-            f"Could not connect to Ollama at {OLLAMA_BASE_URL}. "
-            "Is Ollama running? Try: ollama serve"
+            f"Could not connect to Ollama at {OLLAMA_BASE_URL}. Is Ollama running? Try: ollama serve"
         ) from e
     except httpx.HTTPStatusError as e:
-        raise OllamaConnectionError(
-            f"Ollama returned an error: {e.response.status_code} {e.response.text}"
-        ) from e
+        raise OllamaConnectionError(f"Ollama returned an error: {e.response.status_code} {e.response.text}") from e
 
 
 def embed(
@@ -92,13 +91,10 @@ def embed(
         response = httpx.post(endpoint, json=payload, timeout=30.0)
         response.raise_for_status()
         data = response.json()
-        return data["embeddings"]
+        return list(data["embeddings"])
     except (httpx.ConnectError, httpx.TimeoutException) as e:
         raise OllamaConnectionError(
-            f"Could not connect to Ollama at {OLLAMA_BASE_URL}. "
-            "Is Ollama running? Try: ollama serve"
+            f"Could not connect to Ollama at {OLLAMA_BASE_URL}. Is Ollama running? Try: ollama serve"
         ) from e
     except httpx.HTTPStatusError as e:
-        raise OllamaConnectionError(
-            f"Ollama returned an error: {e.response.status_code} {e.response.text}"
-        ) from e
+        raise OllamaConnectionError(f"Ollama returned an error: {e.response.status_code} {e.response.text}") from e

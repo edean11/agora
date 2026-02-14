@@ -225,23 +225,23 @@ def save_persona(persona: Persona) -> Path:
 ## Psychological Profile
 
 ### Big Five (Low / Medium / High)
-- **Openness:** {persona.big_five.get('openness', 'Medium')} — {persona.big_five_descriptions.get('openness', '')}
-- **Conscientiousness:** {persona.big_five.get('conscientiousness', 'Medium')} — {persona.big_five_descriptions.get('conscientiousness', '')}
-- **Extraversion:** {persona.big_five.get('extraversion', 'Medium')} — {persona.big_five_descriptions.get('extraversion', '')}
-- **Agreeableness:** {persona.big_five.get('agreeableness', 'Medium')} — {persona.big_five_descriptions.get('agreeableness', '')}
-- **Neuroticism:** {persona.big_five.get('neuroticism', 'Medium')} — {persona.big_five_descriptions.get('neuroticism', '')}
+- **Openness:** {persona.big_five.get("openness", "Medium")} — {persona.big_five_descriptions.get("openness", "")}
+- **Conscientiousness:** {persona.big_five.get("conscientiousness", "Medium")} — {persona.big_five_descriptions.get("conscientiousness", "")}
+- **Extraversion:** {persona.big_five.get("extraversion", "Medium")} — {persona.big_five_descriptions.get("extraversion", "")}
+- **Agreeableness:** {persona.big_five.get("agreeableness", "Medium")} — {persona.big_five_descriptions.get("agreeableness", "")}
+- **Neuroticism:** {persona.big_five.get("neuroticism", "Medium")} — {persona.big_five_descriptions.get("neuroticism", "")}
 
 ### True Colors
 - **Primary:** {persona.true_colors_primary} — {persona.true_colors_primary_desc}
 - **Secondary:** {persona.true_colors_secondary} — {persona.true_colors_secondary_desc}
 
 ### Moral Foundations (1-10)
-- **Care/Harm:** {persona.moral_foundations.get('care', 5)}
-- **Fairness/Cheating:** {persona.moral_foundations.get('fairness', 5)}
-- **Loyalty/Betrayal:** {persona.moral_foundations.get('loyalty', 5)}
-- **Authority/Subversion:** {persona.moral_foundations.get('authority', 5)}
-- **Sanctity/Degradation:** {persona.moral_foundations.get('sanctity', 5)}
-- **Liberty/Oppression:** {persona.moral_foundations.get('liberty', 5)}
+- **Care/Harm:** {persona.moral_foundations.get("care", 5)}
+- **Fairness/Cheating:** {persona.moral_foundations.get("fairness", 5)}
+- **Loyalty/Betrayal:** {persona.moral_foundations.get("loyalty", 5)}
+- **Authority/Subversion:** {persona.moral_foundations.get("authority", 5)}
+- **Sanctity/Degradation:** {persona.moral_foundations.get("sanctity", 5)}
+- **Liberty/Oppression:** {persona.moral_foundations.get("liberty", 5)}
 
 ## Cognitive Style
 - **Reasoning:** {persona.cognitive_reasoning}
@@ -370,13 +370,13 @@ def persona_distance(p1: Persona, p2: Persona) -> float:
     v2 = vectorize_persona(p2)
 
     # Euclidean distance
-    squared_diff = sum((a - b) ** 2 for a, b in zip(v1, v2))
-    distance = squared_diff ** 0.5
+    squared_diff = sum((a - b) ** 2 for a, b in zip(v1, v2, strict=True))
+    distance = squared_diff**0.5
 
     # Normalize by sqrt(dims) since max distance is sqrt(dims) when all coords differ by 1
-    normalized = distance / (PERSONA_VECTOR_DIMS ** 0.5)
+    normalized = distance / (PERSONA_VECTOR_DIMS**0.5)
 
-    return normalized
+    return float(normalized)
 
 
 def _find_diversity_gap(personas: list[Persona]) -> str:
@@ -399,10 +399,6 @@ def _find_diversity_gap(personas: list[Persona]) -> str:
 
     # Vectorize all personas
     vectors = [vectorize_persona(p) for p in personas]
-
-    # Compute centroid
-    num_dims = len(vectors[0])
-    centroid = [sum(v[i] for v in vectors) / len(vectors) for i in range(num_dims)]
 
     # Analyze each dimension for clustering
     gaps = []
@@ -429,10 +425,10 @@ def _find_diversity_gap(personas: list[Persona]) -> str:
 
     # Find the least represented moral foundation
     if moral_values:
-        min_foundation = min(moral_values, key=moral_values.get)
+        min_foundation = min(moral_values, key=lambda k: moral_values[k])
         if moral_values[min_foundation] < 0.4:
             gaps.append(f"High {min_foundation}")
-        max_foundation = max(moral_values, key=moral_values.get)
+        max_foundation = max(moral_values, key=lambda k: moral_values[k])
         if moral_values[max_foundation] > 0.6:
             gaps.append(f"Low {max_foundation}")
 
@@ -650,9 +646,9 @@ def _generate_candidate(existing: list[Persona], gap_description: str) -> Person
 
     # Parse response into Persona
     # Extract name from first line (should be # Name)
-    first_line = response.split('\n')[0].strip()
-    if first_line.startswith('#'):
-        name = first_line.lstrip('#').strip()
+    first_line = response.split("\n")[0].strip()
+    if first_line.startswith("#"):
+        name = first_line.lstrip("#").strip()
     else:
         # Fallback: extract from Identity section
         sections = parse_markdown_sections(response)
@@ -691,10 +687,7 @@ def _validate_candidate(candidate: Persona, existing: list[Persona]) -> bool:
     agreeableness = candidate.big_five.get("agreeableness", "Medium").lower()
     directness = candidate.communication_directness.lower()
     conflict = candidate.conflict_approach.lower()
-    if agreeableness == "high" and directness == "blunt" and conflict == "challenger":
-        return False
-
-    return True
+    return not (agreeableness == "high" and directness == "blunt" and conflict == "challenger")
 
 
 def generate_persona(count: int = 1) -> list[Persona]:
@@ -713,7 +706,7 @@ def generate_persona(count: int = 1) -> list[Persona]:
     Returns:
         List of generated Persona objects
     """
-    generated = []
+    generated: list[Persona] = []
 
     for _ in range(count):
         existing = list_personas()
@@ -721,7 +714,7 @@ def generate_persona(count: int = 1) -> list[Persona]:
         existing.extend(generated)
 
         # Try up to 3 times to generate a valid persona
-        for attempt in range(3):
+        for _attempt in range(3):
             gap_description = _find_diversity_gap(existing)
             candidate = _generate_candidate(existing, gap_description)
 
@@ -769,13 +762,13 @@ def interactive_create_persona() -> Persona:
     while true_colors_primary.lower() not in ["orange", "gold", "green", "blue"]:
         true_colors_primary = input("Primary (Orange/Gold/Green/Blue): ").strip()
     true_colors_primary = true_colors_primary.capitalize()
-    true_colors_primary_desc = input(f"  Primary description: ").strip()
+    true_colors_primary_desc = input("  Primary description: ").strip()
 
     true_colors_secondary = ""
     while true_colors_secondary.lower() not in ["orange", "gold", "green", "blue"]:
         true_colors_secondary = input("Secondary (Orange/Gold/Green/Blue): ").strip()
     true_colors_secondary = true_colors_secondary.capitalize()
-    true_colors_secondary_desc = input(f"  Secondary description: ").strip()
+    true_colors_secondary_desc = input("  Secondary description: ").strip()
 
     # Moral Foundations
     print("\n--- Moral Foundations (1-10) ---")

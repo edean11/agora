@@ -31,9 +31,7 @@ def importance_rating_prompt(memory_content: str, context: str) -> list[dict]:
         {
             "role": "user",
             "content": (
-                f"Discussion context: {context}\n\n"
-                f"Memory to rate:\n{memory_content}\n\n"
-                "Importance rating (1-10):"
+                f"Discussion context: {context}\n\nMemory to rate:\n{memory_content}\n\nImportance rating (1-10):"
             ),
         },
     ]
@@ -159,10 +157,7 @@ def reflection_questions_prompt(recent_memories: str) -> list[dict]:
         },
         {
             "role": "user",
-            "content": (
-                f"Recent memories:\n\n{recent_memories}\n\n"
-                "Generate 3 salient questions or themes:"
-            ),
+            "content": (f"Recent memories:\n\n{recent_memories}\n\nGenerate 3 salient questions or themes:"),
         },
     ]
 
@@ -195,17 +190,13 @@ def reflection_synthesis_prompt(question: str, evidence_memories: str) -> list[d
         {
             "role": "user",
             "content": (
-                f"Question: {question}\n\n"
-                f"Evidence from memories:\n{evidence_memories}\n\n"
-                "Your reflective insight:"
+                f"Question: {question}\n\nEvidence from memories:\n{evidence_memories}\n\nYour reflective insight:"
             ),
         },
     ]
 
 
-def persona_generation_prompt(
-    existing_summaries: str, gap_description: str
-) -> list[dict]:
+def persona_generation_prompt(existing_summaries: str, gap_description: str) -> list[dict]:
     """Prompt to generate a new diverse persona.
 
     Args:
@@ -339,9 +330,7 @@ def persona_summary(persona_data: dict) -> str:
     return ". ".join(parts) + "."
 
 
-def ask_prompt(
-    persona_summary: str, question: str, retrieved_memories: str
-) -> list[dict]:
+def ask_prompt(persona_summary: str, question: str, retrieved_memories: str) -> list[dict]:
     """Prompt for direct question to agent outside discussion context.
 
     Args:
@@ -367,10 +356,6 @@ def ask_prompt(
         },
         {
             "role": "user",
-            "content": (
-                f"{memory_section}"
-                f"Question: {question}\n\n"
-                "Your response:"
-            ),
+            "content": (f"{memory_section}Question: {question}\n\nYour response:"),
         },
     ]
