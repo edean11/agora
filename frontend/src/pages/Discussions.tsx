@@ -32,18 +32,18 @@ function Discussions() {
     : []
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl text-charcoal">Discussions</h1>
-        <Button onClick={() => navigate('/discussions/new')}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="font-display text-2xl sm:text-3xl text-charcoal">Discussions</h1>
+        <Button size="sm" onClick={() => navigate('/discussions/new')} className="w-full sm:w-auto">
           Start New Discussion
         </Button>
       </div>
 
       {/* Content */}
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4">
           {[1, 2, 3, 4, 5].map((i) => (
             <Card key={i}>
               <div className="space-y-3">
@@ -58,15 +58,15 @@ function Discussions() {
           ))}
         </div>
       ) : sortedDiscussions.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4">
           {sortedDiscussions.map((discussion) => (
             <DiscussionCard key={discussion.id} discussion={discussion} />
           ))}
         </div>
       ) : (
         <Card>
-          <div className="text-center py-12 space-y-4">
-            <p className="font-sans text-lg text-charcoal-light">
+          <div className="text-center py-8 sm:py-12 space-y-4">
+            <p className="font-sans text-base sm:text-lg text-charcoal-light">
               No discussions yet. Start a conversation!
             </p>
             <div className="pt-4">

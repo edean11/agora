@@ -24,24 +24,32 @@ function Personas() {
   }, [error, showToast])
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl text-charcoal">Personas</h1>
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="font-display text-2xl sm:text-3xl text-charcoal">Personas</h1>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => navigate('/personas/create')}
+            className="flex-1 sm:flex-none"
           >
             Generate New
           </Button>
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => navigate('/personas/create')}
+            className="flex-1 sm:flex-none"
           >
             Create Custom
           </Button>
-          <Button onClick={() => navigate('/personas/create')}>
+          <Button
+            size="sm"
+            onClick={() => navigate('/personas/create')}
+            className="w-full sm:w-auto"
+          >
             Create from Person
           </Button>
         </div>
@@ -49,7 +57,7 @@ function Personas() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <Card key={i}>
               <div className="space-y-4">
@@ -68,15 +76,15 @@ function Personas() {
           ))}
         </div>
       ) : personas && personas.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {personas.map((persona) => (
             <PersonaCard key={persona.id} persona={persona} />
           ))}
         </div>
       ) : (
         <Card>
-          <div className="text-center py-12 space-y-4">
-            <p className="font-sans text-lg text-charcoal-light">
+          <div className="text-center py-8 sm:py-12 space-y-4">
+            <p className="font-sans text-base sm:text-lg text-charcoal-light">
               No personas found. Create your first!
             </p>
             <div className="pt-4">

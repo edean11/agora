@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import HealthBanner from '../ui/HealthBanner'
@@ -8,13 +8,15 @@ interface AppShellProps {
 }
 
 function AppShell({ children }: AppShellProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-parchment">
-      <Header />
+      <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
       <HealthBanner />
       <div className="flex pt-16">
-        <Sidebar />
-        <main className="flex-1 ml-60 overflow-y-auto">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 lg:ml-60 overflow-y-auto animate-fade-in-page">
           {children}
         </main>
       </div>

@@ -169,20 +169,20 @@ function DiscussionView() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Header */}
-      <div className="border-b border-marble-dark bg-parchment px-6 py-4">
+      <div className="border-b border-marble-dark bg-parchment px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-4xl mx-auto space-y-2">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="font-serif text-2xl text-charcoal flex-1">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-2 sm:gap-4">
+            <h1 className="font-serif text-lg sm:text-2xl text-charcoal flex-1">
               {topic}
             </h1>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <span
-                className={`px-3 py-1 rounded-full text-xs font-sans uppercase tracking-wide ${getStatusColor(status)}`}
+                className={`px-2 sm:px-3 py-1 rounded-full text-xs font-sans uppercase tracking-wide ${getStatusColor(status)}`}
               >
                 {status}
               </span>
               {!isConnected && (
-                <span className="text-xs font-sans text-charcoal-light">
+                <span className="text-xs font-sans text-charcoal-light hidden sm:inline">
                   Connecting...
                 </span>
               )}
@@ -190,18 +190,18 @@ function DiscussionView() {
           </div>
 
           {/* Participants and metadata */}
-          <div className="flex items-center gap-4 text-sm text-charcoal-light font-sans">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-charcoal-light font-sans">
             <span>
               {participants.length} participant
               {participants.length !== 1 ? 's' : ''}
             </span>
             <span className="opacity-50">•</span>
-            <span className="text-xs opacity-75">ID: {id}</span>
+            <span className="text-xs opacity-75 truncate">ID: {id}</span>
           </div>
 
           {/* Participant names */}
           {participants.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {participants.map((name) => (
                 <span
                   key={name}
@@ -215,9 +215,9 @@ function DiscussionView() {
 
           {/* Connection error display */}
           {connectionError && (
-            <div className="px-4 py-3 bg-terracotta bg-opacity-20 border border-terracotta rounded flex items-center justify-between">
+            <div className="px-3 sm:px-4 py-2 sm:py-3 bg-terracotta bg-opacity-20 border border-terracotta rounded flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <p className="font-sans text-sm text-terracotta">{connectionError}</p>
-              <Button size="sm" variant="secondary" onClick={retry}>
+              <Button size="sm" variant="secondary" onClick={retry} className="w-full sm:w-auto">
                 Retry
               </Button>
             </div>
@@ -225,7 +225,7 @@ function DiscussionView() {
 
           {/* Ollama down warning */}
           {health && !health.ollama_available && (
-            <div className="px-4 py-3 bg-terracotta bg-opacity-20 border border-terracotta rounded">
+            <div className="px-3 sm:px-4 py-2 sm:py-3 bg-terracotta bg-opacity-20 border border-terracotta rounded">
               <p className="font-sans text-sm text-terracotta">
                 <strong>Ollama is not available.</strong> Please start Ollama to
                 use discussions.
@@ -235,7 +235,7 @@ function DiscussionView() {
 
           {/* Error display */}
           {error && (
-            <div className="px-4 py-2 bg-terracotta bg-opacity-20 border border-terracotta rounded">
+            <div className="px-3 sm:px-4 py-2 bg-terracotta bg-opacity-20 border border-terracotta rounded">
               <p className="font-sans text-sm text-terracotta">{error}</p>
             </div>
           )}

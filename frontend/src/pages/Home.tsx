@@ -64,13 +64,13 @@ function Home() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12">
+    <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 p-4 sm:p-6">
       {/* Hero Section */}
-      <section className="text-center py-8 space-y-4">
-        <h1 className="font-serif text-4xl md:text-5xl text-charcoal">
+      <section className="text-center py-6 sm:py-8 space-y-4">
+        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-charcoal">
           Welcome to the Agora
         </h1>
-        <p className="font-serif italic text-xl text-charcoal-light">
+        <p className="font-serif italic text-lg sm:text-xl text-charcoal-light">
           Where great minds convene
         </p>
         {/* Decorative laurel wreath or thin gold line */}
@@ -100,16 +100,16 @@ function Home() {
       </section>
 
       {/* Quick Stats Row */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <div className="text-center space-y-2">
-            <p className="font-sans text-sm uppercase tracking-wide text-charcoal-light">
+            <p className="font-sans text-xs sm:text-sm uppercase tracking-wide text-charcoal-light">
               Personas
             </p>
             {personasLoading ? (
               <Skeleton variant="title" className="mx-auto w-16 h-12" />
             ) : (
-              <p className="font-serif text-5xl font-bold text-gold">
+              <p className="font-serif text-4xl sm:text-5xl font-bold text-gold">
                 {personaCount}
               </p>
             )}
@@ -117,13 +117,13 @@ function Home() {
         </Card>
         <Card>
           <div className="text-center space-y-2">
-            <p className="font-sans text-sm uppercase tracking-wide text-charcoal-light">
+            <p className="font-sans text-xs sm:text-sm uppercase tracking-wide text-charcoal-light">
               Discussions
             </p>
             {discussionsLoading ? (
               <Skeleton variant="title" className="mx-auto w-16 h-12" />
             ) : (
-              <p className="font-serif text-5xl font-bold text-gold">
+              <p className="font-serif text-4xl sm:text-5xl font-bold text-gold">
                 {discussionCount}
               </p>
             )}
@@ -132,13 +132,13 @@ function Home() {
       </section>
 
       {/* Recent Discussions */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-serif text-2xl text-charcoal">Recent Discussions</h2>
+      <section className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <h2 className="font-serif text-xl sm:text-2xl text-charcoal">Recent Discussions</h2>
           {discussions && discussions.length > 5 && (
             <button
               onClick={() => navigate('/discussions')}
-              className="font-sans text-sm text-gold hover:text-gold-dark transition-colors"
+              className="font-sans text-sm text-gold hover:text-gold-dark transition-colors min-h-[44px] flex items-center"
             >
               View All →
             </button>
@@ -146,7 +146,7 @@ function Home() {
         </div>
 
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {[1, 2, 3].map((i) => (
               <Card key={i}>
                 <div className="space-y-3">
@@ -163,7 +163,7 @@ function Home() {
         ) : recentDiscussions.length === 0 ? (
           <Card>
             <div className="text-center py-8 space-y-4">
-              <p className="font-sans text-charcoal-light">
+              <p className="font-sans text-sm sm:text-base text-charcoal-light">
                 No discussions yet. Start one!
               </p>
               <Button onClick={() => navigate('/discussions/new')}>
@@ -172,7 +172,7 @@ function Home() {
             </div>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {recentDiscussions.map((discussion) => (
               <Card
                 key={discussion.id}
@@ -180,12 +180,12 @@ function Home() {
                 onClick={() => navigate(`/discussions/${discussion.id}`)}
                 className="cursor-pointer"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-2">
-                    <h3 className="font-serif text-lg text-charcoal">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
+                  <div className="flex-1 space-y-2 w-full">
+                    <h3 className="font-serif text-base sm:text-lg text-charcoal">
                       {discussion.topic}
                     </h3>
-                    <div className="flex items-center gap-4 text-sm text-charcoal-light">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-charcoal-light">
                       <span className="font-sans">
                         {discussion.participant_count} participant
                         {discussion.participant_count !== 1 ? 's' : ''}
@@ -200,7 +200,7 @@ function Home() {
                     </div>
                   </div>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-sans uppercase tracking-wide ${getStatusColor(discussion.status)}`}
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs font-sans uppercase tracking-wide flex-shrink-0 ${getStatusColor(discussion.status)}`}
                   >
                     {discussion.status}
                   </span>
@@ -212,14 +212,15 @@ function Home() {
       </section>
 
       {/* Quick Actions */}
-      <section className="flex flex-col sm:flex-row items-center justify-center gap-4 pb-8">
-        <Button size="lg" onClick={() => navigate('/discussions/new')}>
+      <section className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pb-8">
+        <Button size="lg" onClick={() => navigate('/discussions/new')} className="w-full sm:w-auto">
           Start Discussion
         </Button>
         <Button
           size="lg"
           variant="secondary"
           onClick={() => navigate('/personas')}
+          className="w-full sm:w-auto"
         >
           Browse Personas
         </Button>
