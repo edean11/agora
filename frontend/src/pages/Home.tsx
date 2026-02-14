@@ -4,20 +4,36 @@ import { fetchPersonas } from '../api/personas'
 import { fetchDiscussions } from '../api/discussions'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import Spinner from '../components/ui/Spinner'
+import Skeleton from '../components/ui/Skeleton'
+import { useToast } from '../hooks/useToast'
+import { useEffect } from 'react'
 
 function Home() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
 
-  const { data: personas, isLoading: personasLoading } = useQuery({
+  const { data: personas, isLoading: personasLoading, error: personasError } = useQuery({
     queryKey: ['personas'],
     queryFn: fetchPersonas,
   })
 
-  const { data: discussions, isLoading: discussionsLoading } = useQuery({
+  const { data: discussions, isLoading: discussionsLoading, error: discussionsError } = useQuery({
     queryKey: ['discussions'],
     queryFn: fetchDiscussions,
   })
+
+  // Show error toasts
+  useEffect(() => {
+    if (personasError) {
+      showToast('Unable to load personas', 'error')
+    }
+  }, [personasError, showToast])
+
+  useEffect(() => {
+    if (discussionsError) {
+      showToast('Unable to load discussions', 'error')
+    }
+  }, [discussionsError, showToast])
 
   const personaCount = personas?.length ?? 0
   const discussionCount = discussions?.length ?? 0
@@ -90,9 +106,13 @@ function Home() {
             <p className="font-sans text-sm uppercase tracking-wide text-charcoal-light">
               Personas
             </p>
-            <p className="font-serif text-5xl font-bold text-gold">
-              {personasLoading ? '—' : personaCount}
-            </p>
+            {personasLoading ? (
+              <Skeleton variant="title" className="mx-auto w-16 h-12" />
+            ) : (
+              <p className="font-serif text-5xl font-bold text-gold">
+                {personaCount}
+              </p>
+            )}
           </div>
         </Card>
         <Card>
@@ -100,9 +120,13 @@ function Home() {
             <p className="font-sans text-sm uppercase tracking-wide text-charcoal-light">
               Discussions
             </p>
-            <p className="font-serif text-5xl font-bold text-gold">
-              {discussionsLoading ? '—' : discussionCount}
-            </p>
+            {discussionsLoading ? (
+              <Skeleton variant="title" className="mx-auto w-16 h-12" />
+            ) : (
+              <p className="font-serif text-5xl font-bold text-gold">
+                {discussionCount}
+              </p>
+            )}
           </div>
         </Card>
       </section>
@@ -122,8 +146,19 @@ function Home() {
         </div>
 
         {isLoading ? (
-          <div className="py-12">
-            <Spinner size="lg" text="Loading discussions..." />
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <div className="space-y-3">
+                  <Skeleton variant="title" className="w-3/4" />
+                  <div className="flex gap-4">
+                    <Skeleton variant="text" className="w-24" />
+                    <Skeleton variant="text" className="w-24" />
+                    <Skeleton variant="text" className="w-32" />
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         ) : recentDiscussions.length === 0 ? (
           <Card>

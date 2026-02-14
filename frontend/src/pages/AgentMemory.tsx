@@ -1,31 +1,34 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPersona } from '../api/personas'
 import { fetchMemory, fetchReflections, triggerReflection } from '../api/agents'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import Spinner from '../components/ui/Spinner'
+import Skeleton from '../components/ui/Skeleton'
 import AgentAvatar from '../components/discussions/AgentAvatar'
 import MemoryTimeline from '../components/agents/MemoryTimeline'
+import { useToast } from '../hooks/useToast'
 
 function AgentMemory() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { showToast } = useToast()
 
-  const { data: persona, isLoading: personaLoading } = useQuery({
+  const { data: persona, isLoading: personaLoading, error: personaError } = useQuery({
     queryKey: ['persona', id],
     queryFn: () => fetchPersona(id!),
     enabled: !!id,
   })
 
-  const { data: memoryEntries = [], isLoading: memoryLoading } = useQuery({
+  const { data: memoryEntries = [], isLoading: memoryLoading, error: memoryError } = useQuery({
     queryKey: ['memory', id],
     queryFn: () => fetchMemory(id!, 50),
     enabled: !!id,
   })
 
-  const { data: reflectionsData, isLoading: reflectionsLoading } = useQuery({
+  const { data: reflectionsData, isLoading: reflectionsLoading, error: reflectionsError } = useQuery({
     queryKey: ['reflections', id],
     queryFn: () => fetchReflections(id!),
     enabled: !!id,
@@ -36,8 +39,30 @@ function AgentMemory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memory', id] })
       queryClient.invalidateQueries({ queryKey: ['reflections', id] })
+      showToast('Reflection completed successfully', 'success')
+    },
+    onError: () => {
+      showToast('Failed to trigger reflection', 'error')
     },
   })
+
+  useEffect(() => {
+    if (personaError) {
+      showToast('Unable to load agent', 'error')
+    }
+  }, [personaError, showToast])
+
+  useEffect(() => {
+    if (memoryError) {
+      showToast('Unable to load memory', 'error')
+    }
+  }, [memoryError, showToast])
+
+  useEffect(() => {
+    if (reflectionsError) {
+      showToast('Unable to load reflections', 'error')
+    }
+  }, [reflectionsError, showToast])
 
   const handleTriggerReflection = () => {
     reflectMutation.mutate()
@@ -71,8 +96,31 @@ function AgentMemory() {
 
   if (isLoading) {
     return (
-      <div className="py-12">
-        <Spinner size="lg" text="Loading memory..." />
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Card>
+          <div className="flex items-start gap-4">
+            <Skeleton variant="circle" className="h-16 w-16" />
+            <div className="flex-1 space-y-2">
+              <Skeleton variant="title" className="w-1/3" />
+              <Skeleton variant="text" className="w-2/3" />
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center justify-between">
+            <Skeleton variant="title" className="w-1/4" />
+            <Skeleton variant="text" className="w-32 h-10" />
+          </div>
+        </Card>
+        {[1, 2].map((i) => (
+          <Card key={i}>
+            <div className="space-y-4">
+              <Skeleton variant="title" className="w-1/3" />
+              <Skeleton variant="text" className="w-full" />
+              <Skeleton variant="text" className="w-3/4" />
+            </div>
+          </Card>
+        ))}
       </div>
     )
   }
@@ -81,9 +129,10 @@ function AgentMemory() {
     return (
       <div className="max-w-4xl mx-auto">
         <Card>
-          <div className="text-center py-12">
-            <p className="font-sans text-lg text-charcoal-light">
-              Agent not found
+          <div className="text-center py-12 space-y-4">
+            <h1 className="font-serif text-2xl text-gold">Agent not found</h1>
+            <p className="font-sans text-charcoal-light">
+              The agent you're looking for doesn't exist or may have been deleted.
             </p>
             <div className="pt-4">
               <Button onClick={() => navigate('/personas')}>
@@ -129,24 +178,6 @@ function AgentMemory() {
         </div>
       </Card>
 
-      {/* Reflection Success Message */}
-      {reflectMutation.isSuccess && (
-        <div className="bg-olive-light border border-olive/30 rounded-lg px-4 py-3">
-          <p className="font-sans text-sm text-charcoal">
-            Reflection completed successfully. New insights have been generated.
-          </p>
-        </div>
-      )}
-
-      {/* Reflection Error Message */}
-      {reflectMutation.isError && (
-        <div className="bg-terracotta/10 border border-terracotta/30 rounded-lg px-4 py-3">
-          <p className="font-sans text-sm text-charcoal">
-            Failed to trigger reflection. Please try again.
-          </p>
-        </div>
-      )}
-
       {/* Reflections Section */}
       <Card>
         <div className="space-y-6">
@@ -154,7 +185,7 @@ function AgentMemory() {
           {reflections.length === 0 ? (
             <div className="text-center py-8">
               <p className="font-sans text-charcoal-light">
-                No reflections yet. Trigger one above.
+                No reflections yet. Trigger one using the button above.
               </p>
             </div>
           ) : (
@@ -205,7 +236,15 @@ function AgentMemory() {
           <h2 className="font-display text-2xl text-charcoal">
             Memory Entries (Last 50)
           </h2>
-          <MemoryTimeline entries={memoryEntries} />
+          {memoryEntries.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="font-sans text-charcoal-light">
+                This agent has no memories yet. Start a discussion to create memories.
+              </p>
+            </div>
+          ) : (
+            <MemoryTimeline entries={memoryEntries} />
+          )}
         </div>
       </Card>
     </div>

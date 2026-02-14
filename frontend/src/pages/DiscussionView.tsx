@@ -3,9 +3,11 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchDiscussion } from '../api/discussions'
 import { useWebSocket } from '../hooks/useWebSocket'
+import { useHealth } from '../hooks/useHealth'
 import TranscriptView from '../components/discussions/TranscriptView'
 import UserInput from '../components/discussions/UserInput'
 import Spinner from '../components/ui/Spinner'
+import Button from '../components/ui/Button'
 import type { TranscriptEntry, WSEvent } from '../api/types'
 
 function DiscussionView() {
@@ -29,6 +31,9 @@ function DiscussionView() {
     queryFn: () => fetchDiscussion(id!),
     enabled: !!id,
   })
+
+  // Check health for Ollama status
+  const { data: health } = useHealth()
 
   // Update state when discussion loads (only on first load)
   useEffect(() => {
@@ -103,9 +108,9 @@ function DiscussionView() {
   }
 
   // WebSocket connection
-  const { isConnected, send } = useWebSocket(
+  const { isConnected, connectionError, send, retry } = useWebSocket(
     id ? `/api/discussions/${id}/ws` : null,
-    { onEvent: handleWSEvent }
+    { onEvent: handleWSEvent, reconnect: true }
   )
 
   // Auto-start for new discussions
@@ -205,6 +210,26 @@ function DiscussionView() {
                   {name}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Connection error display */}
+          {connectionError && (
+            <div className="px-4 py-3 bg-terracotta bg-opacity-20 border border-terracotta rounded flex items-center justify-between">
+              <p className="font-sans text-sm text-terracotta">{connectionError}</p>
+              <Button size="sm" variant="secondary" onClick={retry}>
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {/* Ollama down warning */}
+          {health && !health.ollama_available && (
+            <div className="px-4 py-3 bg-terracotta bg-opacity-20 border border-terracotta rounded">
+              <p className="font-sans text-sm text-terracotta">
+                <strong>Ollama is not available.</strong> Please start Ollama to
+                use discussions.
+              </p>
             </div>
           )}
 

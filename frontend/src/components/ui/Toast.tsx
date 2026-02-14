@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
+import { ToastContext } from '../../contexts/ToastContext'
 
 type ToastVariant = 'error' | 'success' | 'info'
 
@@ -9,27 +10,16 @@ interface Toast {
   variant: ToastVariant
 }
 
-interface ToastContextValue {
-  showToast: (message: string, variant?: ToastVariant) => void
-  hideToast: (id: string) => void
-}
-
-const ToastContext = createContext<ToastContextValue | undefined>(undefined)
-
-export function useToast() {
-  const context = useContext(ToastContext)
-  if (!context) {
-    throw new Error('useToast must be used within ToastProvider')
-  }
-  return context
-}
-
 interface ToastProviderProps {
   children: ReactNode
 }
 
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([])
+
+  const hideToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
 
   const showToast = useCallback((message: string, variant: ToastVariant = 'info') => {
     const id = `toast-${Date.now()}-${Math.random()}`
@@ -41,11 +31,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     setTimeout(() => {
       hideToast(id)
     }, 5000)
-  }, [])
-
-  const hideToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
-  }, [])
+  }, [hideToast])
 
   const getVariantStyles = (variant: ToastVariant) => {
     switch (variant) {

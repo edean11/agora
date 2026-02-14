@@ -1,19 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPersona, deletePersona } from '../api/personas'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Modal from '../components/ui/Modal'
-import Spinner from '../components/ui/Spinner'
+import Skeleton from '../components/ui/Skeleton'
+import { useToast } from '../hooks/useToast'
 
 function PersonaDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { showToast } = useToast()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
-  const { data: persona, isLoading } = useQuery({
+  const { data: persona, isLoading, error } = useQuery({
     queryKey: ['persona', id],
     queryFn: () => fetchPersona(id!),
     enabled: !!id,
@@ -23,14 +25,40 @@ function PersonaDetail() {
     mutationFn: () => deletePersona(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personas'] })
+      showToast('Persona deleted successfully', 'success')
       navigate('/personas')
+    },
+    onError: () => {
+      showToast('Failed to delete persona', 'error')
     },
   })
 
+  useEffect(() => {
+    if (error) {
+      showToast('Unable to load persona', 'error')
+    }
+  }, [error, showToast])
+
   if (isLoading) {
     return (
-      <div className="py-12">
-        <Spinner size="lg" text="Loading persona..." />
+      <div className="max-w-4xl mx-auto space-y-8">
+        <Card>
+          <div className="space-y-4">
+            <Skeleton variant="title" className="w-1/2" />
+            <Skeleton variant="text" className="w-24" />
+            <Skeleton variant="text" className="w-full" />
+            <Skeleton variant="text" className="w-3/4" />
+          </div>
+        </Card>
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <div className="space-y-4">
+              <Skeleton variant="title" className="w-1/3" />
+              <Skeleton variant="text" className="w-full" />
+              <Skeleton variant="text" className="w-2/3" />
+            </div>
+          </Card>
+        ))}
       </div>
     )
   }
@@ -39,9 +67,10 @@ function PersonaDetail() {
     return (
       <div className="max-w-4xl mx-auto">
         <Card>
-          <div className="text-center py-12">
-            <p className="font-sans text-lg text-charcoal-light">
-              Persona not found
+          <div className="text-center py-12 space-y-4">
+            <h1 className="font-serif text-2xl text-gold">Persona not found</h1>
+            <p className="font-sans text-charcoal-light">
+              The persona you're looking for doesn't exist or may have been deleted.
             </p>
             <div className="pt-4">
               <Button onClick={() => navigate('/personas')}>

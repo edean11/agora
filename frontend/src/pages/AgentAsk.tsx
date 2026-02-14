@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPersona } from '../api/personas'
 import { askAgent } from '../api/agents'
+import { useHealth } from '../hooks/useHealth'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Spinner from '../components/ui/Spinner'
+import Skeleton from '../components/ui/Skeleton'
 import AgentAvatar from '../components/discussions/AgentAvatar'
+import { useToast } from '../hooks/useToast'
 
 interface QAPair {
   question: string
@@ -17,14 +20,17 @@ interface QAPair {
 function AgentAsk() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [question, setQuestion] = useState('')
   const [history, setHistory] = useState<QAPair[]>([])
 
-  const { data: persona, isLoading } = useQuery({
+  const { data: persona, isLoading, error } = useQuery({
     queryKey: ['persona', id],
     queryFn: () => fetchPersona(id!),
     enabled: !!id,
   })
+
+  const { data: health } = useHealth()
 
   const askMutation = useMutation({
     mutationFn: (q: string) => askAgent(id!, q),
@@ -32,7 +38,16 @@ function AgentAsk() {
       setHistory((prev) => [...prev, { question, response: data.response }])
       setQuestion('')
     },
+    onError: () => {
+      showToast('Failed to get response. Please try again.', 'error')
+    },
   })
+
+  useEffect(() => {
+    if (error) {
+      showToast('Unable to load agent', 'error')
+    }
+  }, [error, showToast])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,8 +65,22 @@ function AgentAsk() {
 
   if (isLoading) {
     return (
-      <div className="py-12">
-        <Spinner size="lg" text="Loading agent..." />
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Card>
+          <div className="flex items-start gap-4">
+            <Skeleton variant="circle" className="h-16 w-16" />
+            <div className="flex-1 space-y-2">
+              <Skeleton variant="title" className="w-1/3" />
+              <Skeleton variant="text" className="w-2/3" />
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <Skeleton variant="title" className="w-1/4" />
+          <div className="mt-6">
+            <Skeleton variant="card" className="h-64" />
+          </div>
+        </Card>
       </div>
     )
   }
@@ -60,9 +89,10 @@ function AgentAsk() {
     return (
       <div className="max-w-4xl mx-auto">
         <Card>
-          <div className="text-center py-12">
-            <p className="font-sans text-lg text-charcoal-light">
-              Agent not found
+          <div className="text-center py-12 space-y-4">
+            <h1 className="font-serif text-2xl text-gold">Agent not found</h1>
+            <p className="font-sans text-charcoal-light">
+              The agent you're looking for doesn't exist or may have been deleted.
             </p>
             <div className="pt-4">
               <Button onClick={() => navigate('/personas')}>
@@ -98,6 +128,16 @@ function AgentAsk() {
           <h2 className="font-display text-2xl text-charcoal">
             Ask a Question
           </h2>
+
+          {/* Ollama down warning */}
+          {health && !health.ollama_available && (
+            <div className="px-4 py-3 bg-terracotta bg-opacity-20 border border-terracotta rounded">
+              <p className="font-sans text-sm text-terracotta">
+                <strong>Ollama is not running.</strong> Please start Ollama to
+                ask questions.
+              </p>
+            </div>
+          )}
 
           {/* Chat History */}
           <div className="space-y-4 min-h-[300px] max-h-[600px] overflow-y-auto">
@@ -159,7 +199,7 @@ function AgentAsk() {
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask a question..."
-              disabled={askMutation.isPending}
+              disabled={askMutation.isPending || (health && !health.ollama_available)}
             />
             <div className="flex items-center justify-between">
               <p className="font-sans text-xs text-charcoal-light">
@@ -167,22 +207,13 @@ function AgentAsk() {
               </p>
               <Button
                 type="submit"
-                disabled={!question.trim() || askMutation.isPending}
+                disabled={!question.trim() || askMutation.isPending || (health && !health.ollama_available)}
                 loading={askMutation.isPending}
               >
                 Send
               </Button>
             </div>
           </form>
-
-          {/* Error State */}
-          {askMutation.isError && (
-            <div className="bg-terracotta/10 border border-terracotta/30 rounded-lg px-4 py-3">
-              <p className="font-sans text-sm text-charcoal">
-                Failed to get response. Please try again.
-              </p>
-            </div>
-          )}
         </div>
       </Card>
     </div>
