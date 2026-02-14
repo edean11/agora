@@ -6,7 +6,7 @@ Defines paths, model names, and tuning parameters for the discussion forum.
 from pathlib import Path
 
 # Path constants
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 AGENTS_DIR = DATA_DIR / "agents"
 DISCUSSIONS_DIR = DATA_DIR / "discussions"
