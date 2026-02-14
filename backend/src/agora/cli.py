@@ -18,7 +18,7 @@ from agora.config import (
 )
 from agora.discussion import Discussion, list_discussions
 from agora.ollama_client import OllamaConnectionError
-from agora.persona import generate_persona, interactive_create_persona, list_personas
+from agora.persona import create_persona_from_person, generate_persona, interactive_create_persona, list_personas
 
 
 def cmd_persona_list(args) -> None:
@@ -88,6 +88,38 @@ def cmd_persona_generate(args) -> None:
         print("\nAnd that the required models are installed:")
         print("  ollama pull qwen2.5:32b-instruct")
         print("  ollama pull nomic-embed-text")
+        sys.exit(1)
+
+
+def cmd_persona_from(args) -> None:
+    """Create a persona based on a real or historical person.
+
+    Args:
+        args: Parsed command-line arguments (args.name is the person's name)
+    """
+    try:
+        persona = create_persona_from_person(args.name)
+
+        background_brief = persona.background.split(".")[0][:80]
+        if len(persona.background.split(".")[0]) > 80:
+            background_brief += "..."
+
+        print(f"\nCreated: {persona.name} — {background_brief}")
+        print(f"Persona ID: {persona.id}")
+
+    except FileExistsError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except OllamaConnectionError as e:
+        print(f"Error: {e}")
+        print("\nMake sure Ollama is running:")
+        print("  ollama serve")
+        sys.exit(1)
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n\nPersona creation cancelled.")
         sys.exit(1)
 
 
@@ -444,6 +476,13 @@ def main() -> None:
         )
         persona_generate_parser.set_defaults(func=cmd_persona_generate)
 
+        # persona from
+        persona_from_parser = persona_subparsers.add_parser(
+            "from", help="Create persona based on a real or historical person"
+        )
+        persona_from_parser.add_argument("name", help="Name of the person (e.g. 'aristotle', 'goethe')")
+        persona_from_parser.set_defaults(func=cmd_persona_from)
+
         # === Placeholder commands (task 20) ===
 
         # discuss
@@ -498,7 +537,7 @@ def main() -> None:
 
         # Validate Ollama connectivity for commands that need it
         commands_needing_ollama = {"discuss", "continue", "ask", "reflect"}
-        persona_commands_needing_ollama = {"generate"}
+        persona_commands_needing_ollama = {"generate", "from"}
 
         needs_ollama = args.command in commands_needing_ollama or (
             args.command == "persona"

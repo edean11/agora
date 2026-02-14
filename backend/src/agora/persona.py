@@ -4,12 +4,18 @@ Loads, saves, and manipulates psychologically grounded agent personas
 based on Big Five, True Colors, and Moral Foundations Theory.
 """
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from agora.config import AGENTS_DIR, MIN_DIVERSITY_DISTANCE, PERSONA_VECTOR_DIMS
 from agora.ollama_client import chat
-from agora.prompts import persona_generation_prompt, persona_summary
+from agora.prompts import (
+    persona_disambiguation_prompt,
+    persona_from_person_prompt,
+    persona_generation_prompt,
+    persona_summary,
+)
 from agora.utils import (
     parse_markdown_field,
     parse_markdown_list_fields,
@@ -878,4 +884,108 @@ def interactive_create_persona() -> Persona:
 
     save_persona(persona)
     print(f"\nPersona '{name}' saved successfully!")
+    return persona
+
+
+def _parse_disambiguation_response(
+    response: str,
+) -> tuple[bool, str | list[tuple[int, str, str]]]:
+    """Parse LLM disambiguation response into structured result.
+
+    Args:
+        response: Raw LLM response text
+
+    Returns:
+        Tuple of (is_ambiguous, result) where result is either:
+        - A person description string (if unambiguous)
+        - A list of (number, name, description) tuples (if ambiguous)
+
+    Raises:
+        ValueError: If the response cannot be parsed
+    """
+    text = response.strip()
+
+    if text.startswith("UNAMBIGUOUS:"):
+        person_description = text[len("UNAMBIGUOUS:") :].strip()
+        return (False, person_description)
+
+    if text.startswith("AMBIGUOUS"):
+        candidates: list[tuple[int, str, str]] = []
+        for match in re.finditer(r"(\d+)\.\s*(.+?)\s*—\s*(.+)", text):
+            num = int(match.group(1))
+            name = match.group(2).strip()
+            desc = match.group(3).strip()
+            candidates.append((num, name, desc))
+        if candidates:
+            return (True, candidates)
+
+    raise ValueError(f"Could not parse disambiguation response:\n{text}")
+
+
+def create_persona_from_person(name: str) -> Persona:
+    """Create a persona based on a real or historical person.
+
+    Uses LLM to disambiguate the name, then generates a full persona
+    profile grounded in the person's known biography and character.
+
+    Args:
+        name: Name of the person (e.g. "aristotle", "goethe")
+
+    Returns:
+        Created and saved Persona object
+
+    Raises:
+        FileExistsError: If a persona with this ID already exists
+        ValueError: If disambiguation fails or user cancels selection
+    """
+    # Step 1: Disambiguate
+    messages = persona_disambiguation_prompt(name)
+    response = chat(messages, temperature=0.3)
+    is_ambiguous, result = _parse_disambiguation_response(response)
+
+    # Step 2: Resolve to a single person description
+    if is_ambiguous:
+        assert isinstance(result, list)
+        print("Multiple people match that name:\n")
+        for num, cand_name, desc in result:
+            print(f"  {num}. {cand_name} — {desc}")
+        print()
+        choice = input("Select a number (or 0 to cancel): ").strip()
+        if not choice.isdigit() or int(choice) == 0:
+            raise ValueError("Selection cancelled.")
+        choice_num = int(choice)
+        selected = [c for c in result if c[0] == choice_num]
+        if not selected:
+            raise ValueError(f"Invalid selection: {choice_num}")
+        _, sel_name, sel_desc = selected[0]
+        person_description = f"{sel_name} ({sel_desc})"
+        print(f"\nCreating persona for: {person_description}")
+    else:
+        assert isinstance(result, str)
+        person_description = result
+        print(f"Identified: {person_description}")
+
+    # Step 3: Generate persona
+    messages = persona_from_person_prompt(person_description)
+    response = chat(messages, temperature=0.7)
+
+    # Step 4: Extract name and create ID
+    first_line = response.split("\n")[0].strip()
+    if first_line.startswith("#"):
+        persona_name = first_line.lstrip("#").strip()
+    else:
+        sections = parse_markdown_sections(response)
+        identity = sections.get("Identity", "")
+        persona_name = parse_markdown_field(identity, "Name")
+
+    agent_id = slugify(persona_name) if persona_name else slugify(name)
+
+    # Step 5: Check for collision
+    path = AGENTS_DIR / f"{agent_id}.md"
+    if path.exists():
+        raise FileExistsError(f"Persona '{agent_id}' already exists. Remove it first or use a different name.")
+
+    # Step 6: Parse and save
+    persona = _parse_persona_from_markdown(response, agent_id)
+    save_persona(persona)
     return persona

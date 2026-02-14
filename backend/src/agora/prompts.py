@@ -330,6 +330,118 @@ def persona_summary(persona_data: dict) -> str:
     return ". ".join(parts) + "."
 
 
+def persona_disambiguation_prompt(name: str) -> list[dict]:
+    """Prompt LLM to identify who the user means by a given name.
+
+    If unambiguous, responds with UNAMBIGUOUS: Full Name (brief identifier).
+    If ambiguous, responds with AMBIGUOUS followed by a numbered list of candidates.
+
+    Args:
+        name: The person's name as provided by the user
+
+    Returns:
+        Message list for chat() function
+    """
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are identifying which real or historical person the user is referring to.\n\n"
+                "Rules:\n"
+                "- If the name clearly refers to one well-known person, respond with:\n"
+                "  UNAMBIGUOUS: Full Name (brief identifier, e.g. birth-death years or role)\n"
+                "- If the name could refer to multiple notable people, respond with:\n"
+                "  AMBIGUOUS\n"
+                "  followed by a numbered list of up to 10 candidates, ordered by prominence:\n"
+                "  1. Full Name — brief identifier\n"
+                "  2. Full Name — brief identifier\n"
+                "  ...\n\n"
+                "Only include people who are widely known. Do not invent fictional candidates."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f'Who is "{name}"?',
+        },
+    ]
+
+
+def persona_from_person_prompt(person_description: str) -> list[dict]:
+    """Prompt LLM to create a persona based on a real/historical person.
+
+    Uses the same markdown schema as persona_generation_prompt but instructs
+    the LLM to base all traits on the person's known biography and character.
+
+    Args:
+        person_description: Description of the person (e.g. "Aristotle (384-322 BC, Greek philosopher)")
+
+    Returns:
+        Message list for chat() function
+    """
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are creating a psychologically grounded agent persona based on a real or historical person. "
+                "Use what is known about this person's biography, writings, temperament, and worldview to fill in "
+                "the psychological profile.\n\n"
+                "Requirements:\n"
+                "- Follow the markdown schema exactly (Big Five, True Colors, Moral Foundations, etc.)\n"
+                "- Ground every trait choice in known biographical or textual evidence\n"
+                "- For age, use the person's age during their peak or most representative period\n"
+                "- For background, write a concise summary of their real life\n"
+                "- Be faithful to the historical record; do not invent facts\n\n"
+                "Output the complete persona markdown file, starting with # Name."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Create a persona for: {person_description}\n\n"
+                "Generate a complete persona markdown file:\n\n"
+                "# [Name]\n\n"
+                "## Identity\n"
+                "- **Name:** ...\n"
+                "- **Age:** ...\n"
+                "- **Background:** ...\n\n"
+                "## Psychological Profile\n\n"
+                "### Big Five (Low / Medium / High)\n"
+                "- **Openness:** ... — {behavioral description}\n"
+                "- **Conscientiousness:** ... — {behavioral description}\n"
+                "- **Extraversion:** ... — {behavioral description}\n"
+                "- **Agreeableness:** ... — {behavioral description}\n"
+                "- **Neuroticism:** ... — {behavioral description}\n\n"
+                "### True Colors\n"
+                "- **Primary:** {Orange|Gold|Green|Blue} — {description}\n"
+                "- **Secondary:** {Orange|Gold|Green|Blue} — {description}\n\n"
+                "### Moral Foundations (1-10)\n"
+                "- **Care/Harm:** ...\n"
+                "- **Fairness/Cheating:** ...\n"
+                "- **Loyalty/Betrayal:** ...\n"
+                "- **Authority/Subversion:** ...\n"
+                "- **Sanctity/Degradation:** ...\n"
+                "- **Liberty/Oppression:** ...\n\n"
+                "## Cognitive Style\n"
+                "- **Reasoning:** {Analytical|Holistic|Intuitive|Empirical|Dialectical}\n"
+                "- **Thinking Mode:** {Convergent|Divergent}\n"
+                "- **Argument Style:** {Thesis-first|Evidence-first|Story-first}\n\n"
+                "## Communication Style\n"
+                "- **Pace:** {Rapid|Measured|Slow}\n"
+                "- **Formality:** {Casual|Professional|Academic}\n"
+                "- **Directness:** {Blunt|Balanced|Diplomatic}\n"
+                "- **Emotionality:** {Detached|Neutral|Expressive}\n\n"
+                "## Discussion Tendencies\n"
+                "- **Conflict Approach:** {Challenger|Synthesizer|Harmonizer}\n"
+                "- **Consensus:** {Contrarian|Pragmatist|Consensus-seeker}\n"
+                "- **Focus:** {Abstract|Concrete|Both}\n"
+                "- **Strengths:** ...\n"
+                "- **Blind Spots:** ...\n"
+                "- **Trigger Points:** ...\n"
+            ),
+        },
+    ]
+
+
 def ask_prompt(persona_summary: str, question: str, retrieved_memories: str) -> list[dict]:
     """Prompt for direct question to agent outside discussion context.
 

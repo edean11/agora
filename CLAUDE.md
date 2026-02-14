@@ -10,24 +10,24 @@ Agora is a local CLI discussion forum powered by AI agents, inspired by the "Gen
 
 ```bash
 # Install dependencies
-uv sync
+cd backend && uv sync
 
 # Run the CLI
-uv run agora --help
-uv run agora discuss "topic here"
-uv run agora persona list
-uv run agora continue <discussion-id>
+cd backend && uv run agora --help
+cd backend && uv run agora discuss "topic here"
+cd backend && uv run agora persona list
+cd backend && uv run agora continue <discussion-id>
 
 # Run as module
-uv run python -m agora
+cd backend && uv run python -m agora
 
 # Run validation tests (no formal test framework; tests are standalone scripts)
 uv run python .df/test_task18_simple.py
 
 # Lint, format, and type check (all must pass clean with 0 errors)
-uv run ruff check src/agora/
-uv run ruff format --check src/agora/
-uv run mypy src/agora/
+uv run ruff check backend/src/agora/
+uv run ruff format --check backend/src/agora/
+uv run mypy backend/src/agora/
 ```
 
 ### Required external setup
@@ -43,7 +43,7 @@ Ollama must be running on `localhost:11434`.
 
 The system implements a cognitive architecture with three pillars: **memory streams**, **retrieval scoring**, and **reflection**.
 
-### Module Responsibilities (`src/agora/`)
+### Module Responsibilities (`backend/src/agora/`)
 
 - **`cli.py`** — argparse subcommands + interactive discussion loop. Entry point via `agora.cli:main`.
 - **`agent.py`** — `Agent` class tying persona + memory + LLM reasoning. Key methods: `observe()`, `decide_to_respond()`, `generate_response()`.

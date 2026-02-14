@@ -48,7 +48,7 @@ def chat(
     }
 
     try:
-        response = httpx.post(endpoint, json=payload, timeout=120.0)
+        response = httpx.post(endpoint, json=payload, timeout=httpx.Timeout(timeout=600.0))
         response.raise_for_status()
         data = response.json()
         return str(data["message"]["content"])
