@@ -4,6 +4,11 @@ export interface PersonaSummary {
   name: string
   age: number
   background_brief: string
+  openness?: string
+  conscientiousness?: string
+  extraversion?: string
+  agreeableness?: string
+  neuroticism?: string
 }
 
 export interface BigFiveTrait {
