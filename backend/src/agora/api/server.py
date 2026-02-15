@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from agora.api.routes.discussions import router as discussions_router
 from agora.api.routes.personas import router as personas_router
+from agora.api.routes.ws import router as ws_router
 from agora.config import AGENTS_DIR, DISCUSSIONS_DIR, MEMORY_DIR, OLLAMA_BASE_URL
 
 app = FastAPI(
@@ -18,6 +19,7 @@ app = FastAPI(
 # Include routers
 app.include_router(personas_router)
 app.include_router(discussions_router)
+app.include_router(ws_router)
 
 app.add_middleware(
     CORSMiddleware,
