@@ -22,12 +22,15 @@ class Agent:
         _reflection_needed: Flag indicating if reflection threshold has been met
     """
 
-    def __init__(self, agent_id: str):
+    def __init__(self, agent_id: str, quiet: bool = False):
         """Initialize an Agent by loading persona and memory.
 
         Args:
             agent_id: ID of the agent (persona filename without .md extension)
+            quiet: If True, suppresses print statements (default: False)
         """
+        self.quiet = quiet
+
         # Load persona
         self.persona = load_persona(agent_id)
 
@@ -93,7 +96,8 @@ class Agent:
         if self._reflection_needed:
             from agora import reflection
 
-            print(f"  [{self.name} is reflecting...]")
+            if not self.quiet:
+                print(f"  [{self.name} is reflecting...]")
             reflection.reflect(self)
             self._reflection_needed = False
 
@@ -128,7 +132,8 @@ class Agent:
         if self._reflection_needed:
             from agora import reflection
 
-            print(f"  [{self.name} is reflecting...]")
+            if not self.quiet:
+                print(f"  [{self.name} is reflecting...]")
             reflection.reflect(self)
             self._reflection_needed = False
 
@@ -338,11 +343,12 @@ class Agent:
         return self.persona.id
 
 
-def load_agents(agent_ids: list[str] | None = None) -> list[Agent]:
+def load_agents(agent_ids: list[str] | None = None, quiet: bool = False) -> list[Agent]:
     """Load Agent objects for specified or all personas.
 
     Args:
         agent_ids: List of agent IDs to load, or None to load all
+        quiet: If True, creates agents in quiet mode (default: False)
 
     Returns:
         List of Agent objects
@@ -350,7 +356,7 @@ def load_agents(agent_ids: list[str] | None = None) -> list[Agent]:
     if agent_ids is None:
         # Load all personas
         personas = list_personas()
-        return [Agent(persona.id) for persona in personas]
+        return [Agent(persona.id, quiet=quiet) for persona in personas]
     else:
         # Load specified personas
-        return [Agent(agent_id) for agent_id in agent_ids]
+        return [Agent(agent_id, quiet=quiet) for agent_id in agent_ids]
