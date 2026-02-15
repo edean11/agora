@@ -2,14 +2,16 @@
 
 import httpx
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from agora.api.routes.agents import router as agents_router
 from agora.api.routes.discussions import router as discussions_router
 from agora.api.routes.personas import router as personas_router
 from agora.api.routes.ws import router as ws_router
 from agora.config import AGENTS_DIR, DISCUSSIONS_DIR, MEMORY_DIR, OLLAMA_BASE_URL
+from agora.ollama_client import OllamaConnectionError
 
 app = FastAPI(
     title="Agora API",
@@ -30,6 +32,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Global exception handlers
+@app.exception_handler(FileNotFoundError)
+async def not_found_handler(request: Request, exc: FileNotFoundError) -> JSONResponse:
+    """Handle FileNotFoundError with 404 response."""
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(OllamaConnectionError)
+async def ollama_error_handler(request: Request, exc: OllamaConnectionError) -> JSONResponse:
+    """Handle OllamaConnectionError with 503 response."""
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Ollama is not available. Please ensure Ollama is running on localhost:11434."},
+    )
+
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+    """Handle ValueError with 400 response."""
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
 @app.on_event("startup")
