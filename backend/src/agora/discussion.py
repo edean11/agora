@@ -5,6 +5,7 @@ Manages discussion creation, turn-taking, transcript persistence, and agent part
 
 import random
 import sys
+from collections.abc import Callable
 
 from agora.agent import Agent, load_agents
 from agora.config import DEFAULT_ROUNDS_PER_BATCH, DISCUSSIONS_DIR, MAX_CONSECUTIVE_SILENCE
@@ -31,6 +32,7 @@ class Discussion:
         transcript: In-memory list of transcript entries
         round_number: Current round number
         consecutive_silence: Rounds where no agent spoke
+        on_event: Optional callback for real-time event streaming
     """
 
     def __init__(self, topic: str, agents: list[Agent], discussion_id: str | None = None):
@@ -56,6 +58,7 @@ class Discussion:
         self.transcript: list[dict] = []
         self.round_number = 0
         self.consecutive_silence = 0
+        self.on_event: Callable[[str, dict], None] | None = None
 
     def create(self) -> None:
         """Create a new discussion on disk.
@@ -244,9 +247,16 @@ class Discussion:
         messages = []
         recent_transcript = self.get_recent_transcript()
 
+        # Fire round_start event
+        if self.on_event:
+            self.on_event("round_start", {"round": self.round_number + 1})
+
         # Phase 1: Willingness - collect (agent, willing, engagement_score) tuples
         willingness_results = []
         for agent in self.agents:
+            # Fire agent_thinking event for deciding phase
+            if self.on_event:
+                self.on_event("agent_thinking", {"agent": agent.name, "phase": "deciding"})
             willing, engagement_score = agent.decide_to_respond(self.topic, recent_transcript)
             willingness_results.append((agent, willing, engagement_score))
 
@@ -259,6 +269,10 @@ class Discussion:
         # Phase 3: Generation - each willing agent generates response in order
         if willing_agents:
             for agent, _engagement_score in willing_agents:
+                # Fire agent_thinking event for generating phase
+                if self.on_event:
+                    self.on_event("agent_thinking", {"agent": agent.name, "phase": "generating"})
+
                 # Generate response
                 response = agent.generate_response(self.topic, recent_transcript, self.discussion_id)
 
@@ -268,6 +282,13 @@ class Discussion:
                 # Print in real-time
                 timestamp = self.transcript[-1]["timestamp"]
                 self._print_message(agent.name, response, timestamp)
+
+                # Fire agent_message event
+                if self.on_event:
+                    self.on_event(
+                        "agent_message",
+                        {"speaker": agent.name, "content": response, "timestamp": self.transcript[-1]["timestamp"]},
+                    )
 
                 # Track message for return
                 messages.append({"speaker": agent.name, "content": response})
@@ -296,6 +317,13 @@ class Discussion:
             timestamp = self.transcript[-1]["timestamp"]
             self._print_message(nudged_agent.name, response, timestamp)
 
+            # Fire agent_message event for nudge response
+            if self.on_event:
+                self.on_event(
+                    "agent_message",
+                    {"speaker": nudged_agent.name, "content": response, "timestamp": self.transcript[-1]["timestamp"]},
+                )
+
             # Track message for return
             messages.append({"speaker": nudged_agent.name, "content": response})
 
@@ -304,6 +332,10 @@ class Discussion:
 
         # Increment round number
         self.round_number += 1
+
+        # Fire round_end event
+        if self.on_event:
+            self.on_event("round_end", {"round": self.round_number, "message_count": len(messages)})
 
         return messages
 
@@ -360,6 +392,10 @@ class Discussion:
         # Print the user's message for confirmation
         timestamp = self.transcript[-1]["timestamp"]
         self._print_message("User", content, timestamp)
+
+        # Fire user_message event
+        if self.on_event:
+            self.on_event("user_message", {"speaker": "User", "content": content, "timestamp": timestamp})
 
     def is_finished(self) -> bool:
         """Check if the discussion should be considered finished.
