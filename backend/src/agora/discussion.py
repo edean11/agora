@@ -91,11 +91,12 @@ class Discussion:
         write_markdown_file(transcript_path, transcript_content)
 
     @classmethod
-    def load(cls, discussion_id: str) -> "Discussion":
+    def load(cls, discussion_id: str, quiet: bool = False) -> "Discussion":
         """Load an existing discussion from disk.
 
         Args:
             discussion_id: ID of the discussion to load
+            quiet: If True, creates agents in quiet mode (default: False)
 
         Returns:
             Discussion instance with restored state
@@ -125,7 +126,7 @@ class Discussion:
 
         # Load agents (convert names to IDs by slugifying)
         agent_ids = [slugify(name) for name in participant_names]
-        agents = load_agents(agent_ids)
+        agents = load_agents(agent_ids, quiet=quiet)
 
         # Create Discussion instance
         discussion = cls(topic=topic, agents=agents, discussion_id=discussion_id)
