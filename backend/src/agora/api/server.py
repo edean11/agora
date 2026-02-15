@@ -5,6 +5,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from agora.api.routes.agents import router as agents_router
 from agora.api.routes.discussions import router as discussions_router
 from agora.api.routes.personas import router as personas_router
 from agora.api.routes.ws import router as ws_router
@@ -19,6 +20,7 @@ app = FastAPI(
 # Include routers
 app.include_router(personas_router)
 app.include_router(discussions_router)
+app.include_router(agents_router)
 app.include_router(ws_router)
 
 app.add_middleware(
