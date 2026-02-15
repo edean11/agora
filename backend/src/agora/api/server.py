@@ -5,6 +5,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from agora.api.routes.personas import router as personas_router
 from agora.config import AGENTS_DIR, DISCUSSIONS_DIR, MEMORY_DIR, OLLAMA_BASE_URL
 
 app = FastAPI(
@@ -12,6 +13,9 @@ app = FastAPI(
     version="0.1.0",
     description="API for the Agora AI Discussion Forum",
 )
+
+# Include routers
+app.include_router(personas_router)
 
 app.add_middleware(
     CORSMiddleware,
