@@ -22,6 +22,7 @@ agora/
 │   │   │   ├── SKILL.md
 │   │   │   └── starters/  # Bundled starter populations
 │   │   ├── population/     # /agora:population — manage population segment profiles
+│   │   ├── persona/        # /agora:persona — create, list, view persona profiles
 │   │   ├── ask/            # /agora:ask — direct Q&A with a persona
 │   │   ├── list/           # /agora:list — browse personas, discussions, populations, simulations
 │   │   └── reflect/        # /agora:reflect — agent reflection & synthesis
@@ -65,7 +66,10 @@ git clone <repo-url> && cd agora && ./install.sh
 /agora:population create "US adults age 18-65"  # Create a reusable population
 /agora:population list                          # List saved populations
 /agora:population view <id>                     # View population segments
-/agora:list personas                            # List available personas
+/agora:persona create "Marie Curie"              # Create a new persona
+/agora:persona list                              # List available personas
+/agora:persona view socrates                     # View a persona's full profile
+/agora:list personas                             # List available personas
 /agora:list discussions                         # List past discussions
 /agora:list populations                         # List saved populations
 /agora:list simulations                         # List past simulations

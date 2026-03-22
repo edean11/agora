@@ -36,6 +36,9 @@ Then in any Claude Code session:
 | `/agora:population create "description"` | Create a reusable population |
 | `/agora:population list` | List saved populations |
 | `/agora:population view <id>` | View population segments |
+| `/agora:persona create "Marie Curie"` | Create a new persona |
+| `/agora:persona list` | List available personas |
+| `/agora:persona view <id>` | View a persona's full profile |
 | `/agora:list personas` | List all available personas |
 | `/agora:list discussions` | Browse past discussions |
 | `/agora:list populations` | List saved populations |
@@ -70,7 +73,7 @@ Agora ships with 5 starter personas:
 - **Simone de Beauvoir** — Existentialist, balanced, ethical responsibility
 - **Oscar Wilde** — Witty aesthete, diplomatic, story-first
 
-Add more by placing `.md` files in `~/.agora/agents/`.
+Add more with `/agora:persona create "name"` or by placing `.md` files in `~/.agora/agents/`.
 
 ## Starter Populations
 
