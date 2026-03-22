@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "agora",
-      "source": ".",
+      "source": "./",
       "description": "AI-powered roundtable discussions and population simulations with psychologically grounded personas and demographic segments.",
       "version": "1.0.0",
       "keywords": ["simulation", "personas", "discussion", "population", "debate"]
