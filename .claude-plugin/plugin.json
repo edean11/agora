@@ -5,9 +5,9 @@
   "author": {
     "name": "edean"
   },
-  "repository": "https://github.com/edean/agora",
+  "repository": "https://github.com/edean11/agora",
   "license": "MIT",
   "keywords": ["simulation", "personas", "discussion", "population", "debate", "ai-agents"],
   "skills": "./skills/",
-  "agents": "./agents/"
+  "agents": ["./agents/agora-persona.md", "./agents/aaru-segment.md"]
 }
