@@ -1,13 +1,8 @@
 {
   "name": "agora",
-  "version": "1.0.0",
   "description": "AI-powered roundtable discussions and population simulations. Personas with psychologically grounded profiles debate topics. Population simulations predict how diverse demographic segments respond to scenarios.",
   "author": {
     "name": "edean"
   },
-  "repository": "https://github.com/edean11/agora",
-  "license": "MIT",
-  "keywords": ["simulation", "personas", "discussion", "population", "debate", "ai-agents"],
-  "skills": "./skills/",
   "agents": ["./agents/agora-persona.md", "./agents/aaru-segment.md"]
 }
