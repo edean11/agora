@@ -9,24 +9,27 @@ Agora is a set of Claude Code skills that run AI-powered roundtable discussions 
 ```
 agora/
 ├── .claude-plugin/
-│   ├── plugin.json         # Plugin manifest (name: "agora")
 │   └── marketplace.json    # Marketplace manifest for distribution
 ├── install.sh              # Manual install (alternative to plugin install)
-├── skills/
-│   ├── discuss/            # /agora:discuss — main discussion orchestrator
-│   │   ├── SKILL.md
-│   │   └── starters/      # 5 bundled starter personas
-│   ├── simulate/           # /agora:simulate — population simulation orchestrator
-│   │   ├── SKILL.md
-│   │   └── starters/      # Bundled starter populations
-│   ├── population/         # /agora:population — manage population segment profiles
-│   ├── ask/                # /agora:ask — direct Q&A with a persona
-│   ├── list/               # /agora:list — browse personas, discussions, populations, simulations
-│   └── reflect/            # /agora:reflect — agent reflection & synthesis
-├── agents/
-│   ├── agora-persona.md    # Reusable persona subagent definition
-│   └── aaru-segment.md     # Population segment subagent definition
-└── CLAUDE.md
+├── plugin/                 # Plugin content (kept separate from marketplace root)
+│   ├── .claude-plugin/
+│   │   └── plugin.json     # Plugin manifest (name: "agora")
+│   ├── skills/
+│   │   ├── discuss/        # /agora:discuss — main discussion orchestrator
+│   │   │   ├── SKILL.md
+│   │   │   └── starters/  # 5 bundled starter personas
+│   │   ├── simulate/       # /agora:simulate — population simulation orchestrator
+│   │   │   ├── SKILL.md
+│   │   │   └── starters/  # Bundled starter populations
+│   │   ├── population/     # /agora:population — manage population segment profiles
+│   │   ├── ask/            # /agora:ask — direct Q&A with a persona
+│   │   ├── list/           # /agora:list — browse personas, discussions, populations, simulations
+│   │   └── reflect/        # /agora:reflect — agent reflection & synthesis
+│   ├── agents/
+│   │   ├── agora-persona.md    # Reusable persona subagent definition
+│   │   └── aaru-segment.md     # Population segment subagent definition
+│   └── CLAUDE.md
+└── README.md
 ```
 
 ## Data Directory

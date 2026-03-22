@@ -32,15 +32,15 @@ echo ""
 mkdir -p ~/.claude/skills
 for skill in ask discuss list population reflect simulate; do
     rm -rf ~/.claude/skills/"agora:$skill"
-    cp -r "$SCRIPT_DIR/skills/$skill" ~/.claude/skills/"agora:$skill"
+    cp -r "$SCRIPT_DIR/plugin/skills/$skill" ~/.claude/skills/"agora:$skill"
     echo "  Installed skill: /agora:$skill"
 done
 
 # 2. Install agent definitions
 mkdir -p ~/.claude/agents
-cp "$SCRIPT_DIR/agents/agora-persona.md" ~/.claude/agents/
+cp "$SCRIPT_DIR/plugin/agents/agora-persona.md" ~/.claude/agents/
 echo "  Installed agent: agora-persona"
-cp "$SCRIPT_DIR/agents/aaru-segment.md" ~/.claude/agents/
+cp "$SCRIPT_DIR/plugin/agents/aaru-segment.md" ~/.claude/agents/
 echo "  Installed agent: aaru-segment"
 
 # 3. Create data directory
@@ -49,7 +49,7 @@ mkdir -p "$AGORA_HOME/agents" "$AGORA_HOME/discussions" "$AGORA_HOME/memory" "$A
 # 4. Seed starter personas if empty
 AGENT_COUNT=$(find "$AGORA_HOME/agents" -name '*.md' 2>/dev/null | wc -l)
 if [ "$AGENT_COUNT" -eq 0 ]; then
-    cp "$SCRIPT_DIR/skills/discuss/starters/"*.md "$AGORA_HOME/agents/"
+    cp "$SCRIPT_DIR/plugin/skills/discuss/starters/"*.md "$AGORA_HOME/agents/"
     echo ""
     echo "  Seeded 5 starter personas (Socrates, Ada Lovelace, Nietzsche,"
     echo "  Simone de Beauvoir, Oscar Wilde)"
@@ -61,7 +61,7 @@ fi
 # 5. Seed starter populations if empty
 POP_COUNT=$(find "$AGORA_HOME/populations" -name 'population.md' 2>/dev/null | wc -l)
 if [ "$POP_COUNT" -eq 0 ]; then
-    for starter in "$SCRIPT_DIR/skills/simulate/starters/"*.md; do
+    for starter in "$SCRIPT_DIR/plugin/skills/simulate/starters/"*.md; do
         name=$(basename "$starter" .md)
         mkdir -p "$AGORA_HOME/populations/$name"
         cp "$starter" "$AGORA_HOME/populations/$name/population.md"
