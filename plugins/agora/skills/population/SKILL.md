@@ -14,7 +14,7 @@ You manage population segment profiles for Agora simulations. Populations are co
 
 ## Configuration
 
-**AGORA_HOME:** !`echo ${AGORA_HOME:-$HOME/.agora}`
+**AGORA_HOME:** !`echo $HOME/.agora`
 
 Use this absolute path for ALL file operations. NEVER use relative paths — this skill can be invoked from any working directory.
 

@@ -9,7 +9,7 @@ argument-hint: personas | discussions | populations | simulations
 
 # Agora List
 
-**AGORA_HOME:** !`echo ${AGORA_HOME:-$HOME/.agora}`
+**AGORA_HOME:** !`echo $HOME/.agora`
 
 Use this absolute path for ALL file operations. Never use relative paths.
 

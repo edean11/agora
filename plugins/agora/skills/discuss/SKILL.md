@@ -16,7 +16,7 @@ You are orchestrating a roundtable discussion between AI personas in the Agora f
 
 ## Configuration
 
-**AGORA_HOME:** !`echo ${AGORA_HOME:-$HOME/.agora}`
+**AGORA_HOME:** !`echo $HOME/.agora`
 **SKILL_DIR:** ${CLAUDE_SKILL_DIR}
 
 AGORA_HOME is the root directory for all Agora data (personas, discussions, memory). Use this absolute path for ALL file operations. NEVER use relative paths — this skill can be invoked from any working directory.

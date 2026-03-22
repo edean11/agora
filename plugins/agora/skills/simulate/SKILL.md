@@ -17,7 +17,7 @@ You are orchestrating a population simulation in Agora. You will auto-generate r
 
 ## Configuration
 
-**AGORA_HOME:** !`echo ${AGORA_HOME:-$HOME/.agora}`
+**AGORA_HOME:** !`echo $HOME/.agora`
 **SKILL_DIR:** ${CLAUDE_SKILL_DIR}
 
 AGORA_HOME is the root directory for all Agora data. Use this absolute path for ALL file operations. NEVER use relative paths — this skill can be invoked from any working directory.
