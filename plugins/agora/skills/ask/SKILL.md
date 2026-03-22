@@ -4,7 +4,7 @@ description: >
   Ask a direct question to an Agora persona. The persona responds in character,
   drawing on their psychological profile and memories from past discussions.
 disable-model-invocation: true
-allowed-tools: Read, Write, Glob, Bash, Agent
+allowed-tools: Read, Write, Edit, Glob, Bash, Agent, SendMessage, AskUserQuestion
 argument-hint: <persona-id> "question"
 ---
 
