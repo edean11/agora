@@ -1,5 +1,4 @@
 ---
-name: list
 description: >
   List available Agora personas, past discussions, saved populations, or
   past simulations. Use when the user wants to browse Agora resources.

@@ -1,5 +1,4 @@
 ---
-name: discuss
 description: >
   Start or continue an Agora discussion where AI personas with psychologically
   grounded personalities debate a topic. Each persona is a Claude Code subagent

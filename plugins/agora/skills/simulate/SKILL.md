@@ -1,5 +1,4 @@
 ---
-name: simulate
 description: >
   Run a population simulation to predict how different demographic segments
   would respond to a scenario. Auto-generates representative population

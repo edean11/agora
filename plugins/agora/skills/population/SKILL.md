@@ -1,5 +1,4 @@
 ---
-name: population
 description: >
   Create, list, and view population segment profiles for Agora simulations.
   Auto-generates diverse representative demographic segments from a description.

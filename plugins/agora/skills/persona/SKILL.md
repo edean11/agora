@@ -1,5 +1,4 @@
 ---
-name: persona
 description: >
   Create, list, and view discussion personas for Agora roundtables.
   Auto-generates psychologically grounded persona profiles (Big Five, True Colors, Moral Foundations)

@@ -1,5 +1,4 @@
 ---
-name: reflect
 description: >
   Trigger reflection for an Agora persona. Reads recent memories, generates
   reflection questions, and synthesizes insights. Use when you want an agent

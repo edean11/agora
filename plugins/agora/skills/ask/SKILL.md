@@ -1,5 +1,4 @@
 ---
-name: ask
 description: >
   Ask a direct question to an Agora persona. The persona responds in character,
   drawing on their psychological profile and memories from past discussions.
