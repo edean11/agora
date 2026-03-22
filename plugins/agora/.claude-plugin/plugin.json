@@ -1,6 +1,7 @@
 {
   "name": "agora",
   "description": "AI-powered roundtable discussions and population simulations. Personas with psychologically grounded profiles debate topics. Population simulations predict how diverse demographic segments respond to scenarios.",
+  "version": "1.0.0",
   "author": {
     "name": "edean"
   },
