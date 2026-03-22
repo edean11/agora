@@ -9,7 +9,12 @@
   "plugins": [
     {
       "name": "agora",
-      "source": "./plugins/agora",
+      "source": {
+        "source": "git-subdir",
+        "url": "edean11/agora",
+        "path": "plugins/agora",
+        "ref": "main"
+      },
       "description": "AI-powered roundtable discussions and population simulations with psychologically grounded personas and demographic segments.",
       "version": "1.0.0",
       "keywords": [
